@@ -14,6 +14,12 @@ export interface QualityProfileFormatItem {
   score: number;
 }
 
+export interface QualityProfileAudioFormatItem {
+  format: number;
+  name: string;
+  score: number;
+}
+
 export interface QualityProfileQualityItem {
   quality: Quality;
   allowed: boolean;
@@ -43,6 +49,11 @@ export interface QualityProfileModel extends ModelBase {
   cutoffFormatScore: number;
   minUpgradeFormatScore: number;
   formatItems: QualityProfileFormatItem[];
+  audioFormatItems: QualityProfileAudioFormatItem[];
+  minAudioFormatScore: number;
+  cutoffAudioFormatScore: number;
+  upgradeForAudio: boolean;
+  audioUpgradeRequiresTitleHint: boolean;
 }
 
 const PATH = '/qualityprofile';
