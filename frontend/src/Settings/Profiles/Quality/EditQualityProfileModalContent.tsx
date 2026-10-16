@@ -21,6 +21,7 @@ import { icons, inputTypes, kinds } from 'Helpers/Props';
 import useQualityProfileInUse from 'Settings/Profiles/Quality/useQualityProfileInUse';
 import { InputChanged } from 'typings/inputs';
 import translate from 'Utilities/String/translate';
+import QualityProfileAudioFormatItems from './QualityProfileAudioFormatItems';
 import QualityProfileFormatItems from './QualityProfileFormatItems';
 import {
   mapFailuresByQualityId,
@@ -91,6 +92,11 @@ function EditQualityProfileModalContent({
     cutoffFormatScore,
     items,
     formatItems,
+    audioFormatItems,
+    minAudioFormatScore,
+    cutoffAudioFormatScore,
+    upgradeForAudio,
+    audioUpgradeRequiresTitleHint,
   } = item;
 
   const qualities = useMemo(() => {
@@ -316,6 +322,26 @@ function EditQualityProfileModalContent({
     1000
   );
 
+  const handleAudioFormatItemScoreChange = useDebouncedCallback(
+    (formatId: number, score: number) => {
+      const newAudioFormatItems = audioFormatItems.value.map(
+        (audioFormatItem) => {
+          if (audioFormatItem.format === formatId) {
+            return {
+              ...audioFormatItem,
+              score,
+            };
+          }
+
+          return audioFormatItem;
+        }
+      );
+
+      updateValue('audioFormatItems', newAudioFormatItems);
+    },
+    1000
+  );
+
   useEffect(() => {
     if (wasSaving && !isSaving && !saveError) {
       onModalClose();
@@ -471,6 +497,80 @@ function EditQualityProfileModalContent({
                   </FormRow>
                 ) : null}
 
+                {audioFormatItems.value.length > 0 ? (
+                  <FormRow>
+                    <FormLabel>{translate('UpgradeForAudio')}</FormLabel>
+
+                    <FormInputHelpText
+                      text={translate('UpgradeForAudioHelpText')}
+                    />
+
+                    <FormInput
+                      type={inputTypes.CHECK}
+                      name="upgradeForAudio"
+                      {...upgradeForAudio}
+                      onChange={handleInputChange}
+                    />
+                  </FormRow>
+                ) : null}
+
+                {audioFormatItems.value.length > 0 && upgradeForAudio.value ? (
+                  <FormRow>
+                    <FormLabel>
+                      {translate('AudioUpgradeRequiresTitleHint')}
+                    </FormLabel>
+
+                    <FormInputHelpText
+                      text={translate('AudioUpgradeRequiresTitleHintHelpText')}
+                    />
+
+                    <FormInput
+                      type={inputTypes.CHECK}
+                      name="audioUpgradeRequiresTitleHint"
+                      {...audioUpgradeRequiresTitleHint}
+                      onChange={handleInputChange}
+                    />
+                  </FormRow>
+                ) : null}
+
+                {audioFormatItems.value.length > 0 ? (
+                  <FormRow>
+                    <FormLabel>
+                      {translate('MinimumAudioFormatScore')}
+                    </FormLabel>
+
+                    <FormInputHelpText
+                      text={translate('MinimumAudioFormatScoreHelpText')}
+                    />
+
+                    <FormInput
+                      type={inputTypes.NUMBER}
+                      name="minAudioFormatScore"
+                      {...minAudioFormatScore}
+                      onChange={handleInputChange}
+                    />
+                  </FormRow>
+                ) : null}
+
+                {upgradeForAudio.value && audioFormatItems.value.length > 0 ? (
+                  <FormRow>
+                    <FormLabel>
+                      {translate('UpgradeUntilAudioFormatScore')}
+                    </FormLabel>
+
+                    <FormInputHelpText
+                      text={translate('UpgradeUntilAudioFormatScoreHelpText')}
+                    />
+
+                    <FormInput
+                      type={inputTypes.NUMBER}
+                      name="cutoffAudioFormatScore"
+                      {...cutoffAudioFormatScore}
+                      onChange={handleInputChange}
+                    />
+                  </FormRow>
+                ) : null}
+
                 <div className={styles.formatItemLarge}>
                   <QualityProfileFormatItems
                     profileFormatItems={formatItems.value}
@@ -478,6 +578,15 @@ function EditQualityProfileModalContent({
                     warnings={formatItems.warnings}
                     onQualityProfileFormatItemScoreChange={
                       handleFormatItemScoreChange
+                    }
+                  />
+
+                  <QualityProfileAudioFormatItems
+                    profileAudioFormatItems={audioFormatItems.value}
+                    errors={audioFormatItems.errors}
+                    warnings={audioFormatItems.warnings}
+                    onQualityProfileAudioFormatItemScoreChange={
+                      handleAudioFormatItemScoreChange
                     }
                   />
                 </div>
@@ -513,6 +622,15 @@ function EditQualityProfileModalContent({
                   warnings={formatItems.warnings}
                   onQualityProfileFormatItemScoreChange={
                     handleFormatItemScoreChange
+                  }
+                />
+
+                <QualityProfileAudioFormatItems
+                  profileAudioFormatItems={audioFormatItems.value}
+                  errors={audioFormatItems.errors}
+                  warnings={audioFormatItems.warnings}
+                  onQualityProfileAudioFormatItemScoreChange={
+                    handleAudioFormatItemScoreChange
                   }
                 />
               </div>

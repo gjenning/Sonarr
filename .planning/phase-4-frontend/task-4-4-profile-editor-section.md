@@ -1,6 +1,6 @@
 # Task 4.4: Quality profile editor section
 
-Status: TODO
+Status: DONE
 Phase: 4
 Depends: 4.1, 4.3
 Verify: `yarn typecheck && yarn build`
@@ -29,8 +29,42 @@ Add:
 - Modify: profile form state/submit mapping as needed
 
 ## Acceptance Criteria
-- [ ] Editing scores/toggles persists and reloads correctly.
-- [ ] `yarn build` passes.
+- [x] Editing scores/toggles persists and reloads correctly.
+- [x] `yarn build` passes.
 
 ## Result
-_(fill on completion)_
+Added a "Custom Audio Formats" section to the quality profile editor, mirroring the Custom
+Formats section:
+
+- **Created** `frontend/src/Settings/Profiles/Quality/QualityProfileAudioFormatItems.tsx` —
+  score list (sorted score desc, then name), errors/warnings display, empty-state message
+  linking to `/settings/audioformats`. Reuses the generic `QualityProfileFormatItem` row
+  component and `QualityProfileFormatItems.module.css` styles (no new CSS module needed).
+- **Modified** `EditQualityProfileModalContent.tsx`:
+  - Score rows for `audioFormatItems` (rendered in both `formatItemLarge` and
+    `formatItemSmall` containers, same responsive pattern as CF), with a debounced
+    `handleAudioFormatItemScoreChange` mirroring the CF one.
+  - `upgradeForAudio` check input (label "Upgrade for Audio") + `audioUpgradeRequiresTitleHint`
+    check input (label "Require Audio Hint in Release Title"), the latter shown only when
+    `upgradeForAudio` is on.
+  - `minAudioFormatScore` number input; `cutoffAudioFormatScore` number input shown only when
+    `upgradeForAudio` is on (audio cutoff is meaningless without it).
+  - Score inputs and toggles are hidden when no audio formats exist, mirroring CF behavior;
+    the list then shows the "add a custom audio format" message.
+  - Help texts explain: audio upgrades only replace files with equal video quality; the
+    title-hint grab-time filter.
+- **Modified** `src/NzbDrone.Core/Localization/Core/en.json` — added 11 English keys
+  (`UpgradeForAudio`, `AudioUpgradeRequiresTitleHint`, `MinimumAudioFormatScore`,
+  `UpgradeUntilAudioFormatScore` + help texts, `CustomAudioFormat`, `CustomAudioFormatHelpText`,
+  `WantMoreControlAddACustomAudioFormat`).
+
+Deviations from the task file:
+- Actual file path is `frontend/src/Settings/Profiles/Quality/EditQualityProfileModalContent.tsx`
+  (no `Edit/` subfolder as the task file stated); `EditQualityProfileModal.tsx` likewise.
+- No submit-mapping change was needed: `useManageQualityProfile` → `useManageProviderSettings`
+  is schema-driven and `saveProvider` spreads `{...provider, ...changedValues}`, so the new
+  fields round-trip automatically; `updateValue('audioFormatItems' | 'upgradeForAudio' | ...)`
+  flows through the same pending-changes store as `formatItems`.
+- `yarn` is not installed in this environment; ran the underlying commands instead:
+  `node_modules/.bin/tcm ... && tsc --noEmit -p frontend/tsconfig.json` (typecheck) and
+  `node_modules/.bin/vite build` (build). Both pass; eslint (with --fix) clean on changed files.
