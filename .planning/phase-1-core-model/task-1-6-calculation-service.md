@@ -1,6 +1,6 @@
 # Task 1.6: AudioFormatCalculationService
 
-Status: TODO
+Status: DONE
 Phase: 1
 Depends: 1.3, 1.5
 Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~AudioFormats"`
@@ -36,8 +36,41 @@ Mirror `src/NzbDrone.Core/CustomFormats/CustomFormatCalculationService.cs`:
    profile type exists).
 
 ## Acceptance Criteria
-- [ ] Group semantics correct incl. negate + StreamCount exception.
-- [ ] Null-safe everywhere; tests pass.
+- [x] Group semantics correct incl. negate + StreamCount exception.
+- [x] Null-safe everywhere; tests pass.
 
 ## Result
-_(fill on completion)_
+Created `AudioFormatCalculationService` (`IAudioFormatCalculationService` + impl) mirroring
+`CustomFormatCalculationService`:
+
+- `ParseAudioFormats(MediaInfoModel, string sceneName)` → formats whose spec groups match,
+  ordered by name. Group semantics (locked decision): specs grouped by type; a group matches
+  when **at least one stream satisfies all specs in the group**, using 1.5's per-stream
+  `IsSatisfiedBy(input, stream)` overload (negate per-spec per-stream, StreamCount evaluated
+  on the stream set).
+- Overloads: `ParseAudioFormats(EpisodeFile)` (release title = SceneName → OriginalFilePath
+  filename → RelativePath filename, like CF) and `ParseAudioFormats(LocalEpisode)`.
+- Null `MediaInfo` → empty list (locked decision).
+- Empty specification list → format does not match.
+- No caching: the CF service calls `_formatService.All()` per call, so this one does too.
+
+Tests: `AudioFormatCalculationServiceFixture` — 19 tests (null MediaInfo, empty specs,
+single-spec match/no-match, same-stream group semantics, cross-stream non-match, negate via
+value and via `Negate`, StreamCount set-level exception incl. `=0` with no streams, name
+ordering, EpisodeFile/LocalEpisode overloads incl. null MediaInfo). Verify run:
+`Passed: 94, Failed: 0` (includes the 75 spec tests).
+
+Deviations / notes:
+- **Score helper deferred to 3.1**: `QualityProfile` has no `AudioFormatItems` until 2.1, so
+  `GetAudioFormatScore` is not defined here (task allowed deferring; noted as instructed).
+- Task said "empty spec list → does not match (CF convention — verify in
+  `CustomFormat.IsSatisfiedBy`)". `CustomFormat.IsSatisfiedBy` does not exist; the actual CF
+  calculation service *matches* formats with no specs (`All()` over zero groups is true).
+  Implemented as the task explicitly requires (no match) — this intentionally differs from CF.
+- `LocalEpisode` has no `ReleaseTitle` property; used `GetSceneOrFileName()` (SceneName with
+  filename fallback), the same source the CF local-episode path uses.
+- Added the per-stream `IsSatisfiedBy(AudioFormatInput, MediaInfoAudioStreamModel)` overload
+  to `IAudioFormatSpecification` (it was only on the concrete class after 1.5) so the service
+  can group over the interface.
+- Constructor takes `Logger` in addition to `IAudioFormatService` to mirror the CF service's
+  trace logging of release-title selection.

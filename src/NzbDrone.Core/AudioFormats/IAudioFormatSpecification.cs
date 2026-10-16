@@ -1,3 +1,4 @@
+using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Validation;
 
 namespace NzbDrone.Core.AudioFormats
@@ -15,5 +16,9 @@ namespace NzbDrone.Core.AudioFormats
 
         IAudioFormatSpecification Clone();
         bool IsSatisfiedBy(AudioFormatInput input);
+
+        // Per-stream evaluation used by the calculation service for group matching:
+        // evaluate this specification against a single audio stream (negate applied).
+        bool IsSatisfiedBy(AudioFormatInput input, MediaInfoAudioStreamModel stream);
     }
 }
