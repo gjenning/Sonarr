@@ -22,6 +22,8 @@ namespace Sonarr.Api.V3.Profiles.Quality
             SharedValidator.RuleFor(c => c.Name).NotEmpty();
 
             SharedValidator.RuleFor(c => c.MinUpgradeFormatScore).GreaterThanOrEqualTo(1);
+            SharedValidator.RuleFor(c => c.MinAudioFormatScore).GreaterThanOrEqualTo(0);
+            SharedValidator.RuleFor(c => c.CutoffAudioFormatScore).GreaterThanOrEqualTo(c => c.MinAudioFormatScore);
             SharedValidator.RuleFor(c => c.Cutoff).ValidCutoff();
             SharedValidator.RuleFor(c => c.Items).ValidItems();
 

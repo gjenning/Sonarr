@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Profiles;
 using NzbDrone.Core.Profiles.Qualities;
@@ -17,6 +18,11 @@ namespace Sonarr.Api.V3.Profiles.Quality
         public int CutoffFormatScore { get; set; }
         public int MinUpgradeFormatScore { get; set; }
         public List<ProfileFormatItemResource> FormatItems { get; set; }
+        public List<ProfileAudioFormatItemResource> AudioFormatItems { get; set; }
+        public int MinAudioFormatScore { get; set; }
+        public int CutoffAudioFormatScore { get; set; }
+        public bool UpgradeForAudio { get; set; }
+        public bool AudioUpgradeRequiresTitleHint { get; set; }
     }
 
     public class QualityProfileQualityItemResource : RestResource
@@ -42,6 +48,13 @@ namespace Sonarr.Api.V3.Profiles.Quality
         public int Score { get; set; }
     }
 
+    public class ProfileAudioFormatItemResource : RestResource
+    {
+        public int Format { get; set; }
+        public string Name { get; set; }
+        public int Score { get; set; }
+    }
+
     public static class ProfileResourceMapper
     {
         public static QualityProfileResource ToResource(this QualityProfile model)
@@ -61,7 +74,12 @@ namespace Sonarr.Api.V3.Profiles.Quality
                 MinFormatScore = model.MinFormatScore,
                 CutoffFormatScore = model.CutoffFormatScore,
                 MinUpgradeFormatScore = model.MinUpgradeFormatScore,
-                FormatItems = model.FormatItems.ConvertAll(ToResource)
+                FormatItems = model.FormatItems.ConvertAll(ToResource),
+                AudioFormatItems = model.AudioFormatItems.ConvertAll(ToResource),
+                MinAudioFormatScore = model.MinAudioFormatScore,
+                CutoffAudioFormatScore = model.CutoffAudioFormatScore,
+                UpgradeForAudio = model.UpgradeForAudio,
+                AudioUpgradeRequiresTitleHint = model.AudioUpgradeRequiresTitleHint
             };
         }
 
@@ -95,6 +113,21 @@ namespace Sonarr.Api.V3.Profiles.Quality
             };
         }
 
+        public static ProfileAudioFormatItemResource ToResource(this ProfileAudioFormatItem model)
+        {
+            if (model == null)
+            {
+                return null;
+            }
+
+            return new ProfileAudioFormatItemResource
+            {
+                Format = model.Format.Id,
+                Name = model.Format.Name,
+                Score = model.Score
+            };
+        }
+
         public static QualityProfile ToModel(this QualityProfileResource resource)
         {
             if (resource == null)
@@ -112,7 +145,12 @@ namespace Sonarr.Api.V3.Profiles.Quality
                 MinFormatScore = resource.MinFormatScore,
                 CutoffFormatScore = resource.CutoffFormatScore,
                 MinUpgradeFormatScore = resource.MinUpgradeFormatScore,
-                FormatItems = resource.FormatItems.ConvertAll(ToModel)
+                FormatItems = resource.FormatItems.ConvertAll(ToModel),
+                AudioFormatItems = resource.AudioFormatItems.ConvertAll(ToModel),
+                MinAudioFormatScore = resource.MinAudioFormatScore,
+                CutoffAudioFormatScore = resource.CutoffAudioFormatScore,
+                UpgradeForAudio = resource.UpgradeForAudio,
+                AudioUpgradeRequiresTitleHint = resource.AudioUpgradeRequiresTitleHint
             };
         }
 
@@ -141,6 +179,15 @@ namespace Sonarr.Api.V3.Profiles.Quality
             return new ProfileFormatItem
             {
                 Format = new CustomFormat { Id = resource.Format },
+                Score = resource.Score
+            };
+        }
+
+        public static ProfileAudioFormatItem ToModel(this ProfileAudioFormatItemResource resource)
+        {
+            return new ProfileAudioFormatItem
+            {
+                Format = new AudioFormat { Id = resource.Format },
                 Score = resource.Score
             };
         }

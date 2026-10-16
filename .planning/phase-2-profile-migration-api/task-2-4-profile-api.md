@@ -1,6 +1,6 @@
 # Task 2.4: QualityProfileResource + validator updates (V3 + V5)
 
-Status: TODO
+Status: DONE
 Phase: 2
 Depends: 2.1, 2.3
 Verify: `dotnet build src/Sonarr.sln -c Debug`
@@ -28,9 +28,32 @@ Expose the new profile fields over the API (both API versions) and validate them
 - Modify: profile validator(s) as above
 
 ## Acceptance Criteria
-- [ ] `GET /api/v3/qualityprofile` includes the new fields; PUT round-trips them.
-- [ ] Invalid combos (negative scores) rejected if a numeric validator pattern exists.
-- [ ] Solution builds.
+- [x] `GET /api/v3/qualityprofile` includes the new fields; PUT round-trips them.
+- [x] Invalid combos (negative scores) rejected if a numeric validator pattern exists.
+- [x] Solution builds.
 
 ## Result
-_(fill on completion)_
+Added the five audio fields to `QualityProfileResource` in both API layers (they are duplicated
+types, not shared), plus a `ProfileAudioFormatItemResource` (Format/Name/Score, mirroring
+`ProfileFormatItemResource`) and `ToResource`/`ToModel` mappings for it and the new scalar fields:
+- `src/Sonarr.Api.V3/Profiles/Quality/QualityProfileResource.cs`
+- `src/Sonarr.Api.V5/Profiles/Quality/QualityProfileResource.cs`
+
+Validation (mirrors the existing numeric-score pattern `MinUpgradeFormatScore >= 1`, which lives in
+the controllers' `SharedValidator`, not in `QualityProfileResourceValidator`):
+- `MinAudioFormatScore >= 0` (rejects negative scores).
+- `CutoffAudioFormatScore >= MinAudioFormatScore` (cutoff-vs-min sanity rule).
+Added to both `QualityProfileController`s (V3 + V5).
+
+Deviations:
+- The task pointed at `QualityProfileValidator.cs` / `QualityCutoffValidator`; the actual files are
+  `QualityProfileResourceValidator.cs` (only quality-size rules, no score rules) and the score rules
+  live in the controllers. Followed what exists: score rules added to controller `SharedValidator`.
+- No existing cutoff≥min rule existed for custom-format scores, so the audio cutoff≥min rule was
+  added per the task's explicit example; no other rules invented (e.g. no "all audio formats must
+  be present" rule, no "min can never be satisfied" rule — audio scoring helper arrives in 3.1).
+- Schema endpoints (`/schema`) pick the new fields up automatically via `SchemaBuilder`; verified by
+  the existing Api.Test suite (37/37 pass, includes schema builder tests).
+
+Verify: `dotnet build src/Sonarr.sln -c Debug` → 0 warnings, 0 errors.
+`dotnet test src/NzbDrone.Api.Test/Sonarr.Api.Test.csproj` → 37/37 pass.

@@ -1,3 +1,4 @@
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Profiles;
 using NzbDrone.Core.Profiles.Qualities;
@@ -15,6 +16,11 @@ public class QualityProfileResource : RestResource
     public int CutoffFormatScore { get; set; }
     public int MinUpgradeFormatScore { get; set; }
     public List<ProfileFormatItemResource> FormatItems { get; set; } = [];
+    public List<ProfileAudioFormatItemResource> AudioFormatItems { get; set; } = [];
+    public int MinAudioFormatScore { get; set; }
+    public int CutoffAudioFormatScore { get; set; }
+    public bool UpgradeForAudio { get; set; }
+    public bool AudioUpgradeRequiresTitleHint { get; set; }
 }
 
 public class QualityProfileQualityItemResource : RestResource
@@ -35,6 +41,13 @@ public class ProfileFormatItemResource : RestResource
     public int Score { get; set; }
 }
 
+public class ProfileAudioFormatItemResource : RestResource
+{
+    public int Format { get; set; }
+    public string? Name { get; set; }
+    public int Score { get; set; }
+}
+
 public static class ProfileResourceMapper
 {
     public static QualityProfileResource ToResource(this QualityProfile model)
@@ -49,7 +62,12 @@ public static class ProfileResourceMapper
             MinFormatScore = model.MinFormatScore,
             CutoffFormatScore = model.CutoffFormatScore,
             MinUpgradeFormatScore = model.MinUpgradeFormatScore,
-            FormatItems = model.FormatItems.ConvertAll(ToResource)
+            FormatItems = model.FormatItems.ConvertAll(ToResource),
+            AudioFormatItems = model.AudioFormatItems.ConvertAll(ToResource),
+            MinAudioFormatScore = model.MinAudioFormatScore,
+            CutoffAudioFormatScore = model.CutoffAudioFormatScore,
+            UpgradeForAudio = model.UpgradeForAudio,
+            AudioUpgradeRequiresTitleHint = model.AudioUpgradeRequiresTitleHint
         };
     }
 
@@ -78,6 +96,16 @@ public static class ProfileResourceMapper
         };
     }
 
+    public static ProfileAudioFormatItemResource ToResource(this ProfileAudioFormatItem model)
+    {
+        return new ProfileAudioFormatItemResource
+        {
+            Format = model.Format.Id,
+            Name = model.Format.Name,
+            Score = model.Score
+        };
+    }
+
     public static QualityProfile ToModel(this QualityProfileResource resource)
     {
         return new QualityProfile
@@ -90,7 +118,12 @@ public static class ProfileResourceMapper
             MinFormatScore = resource.MinFormatScore,
             CutoffFormatScore = resource.CutoffFormatScore,
             MinUpgradeFormatScore = resource.MinUpgradeFormatScore,
-            FormatItems = resource.FormatItems.ConvertAll(ToModel)
+            FormatItems = resource.FormatItems.ConvertAll(ToModel),
+            AudioFormatItems = resource.AudioFormatItems.ConvertAll(ToModel),
+            MinAudioFormatScore = resource.MinAudioFormatScore,
+            CutoffAudioFormatScore = resource.CutoffAudioFormatScore,
+            UpgradeForAudio = resource.UpgradeForAudio,
+            AudioUpgradeRequiresTitleHint = resource.AudioUpgradeRequiresTitleHint
         };
     }
 
@@ -114,6 +147,15 @@ public static class ProfileResourceMapper
         return new ProfileFormatItem
         {
             Format = new CustomFormat { Id = resource.Format },
+            Score = resource.Score
+        };
+    }
+
+    public static ProfileAudioFormatItem ToModel(this ProfileAudioFormatItemResource resource)
+    {
+        return new ProfileAudioFormatItem
+        {
+            Format = new AudioFormat { Id = resource.Format },
             Score = resource.Score
         };
     }
