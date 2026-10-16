@@ -1,6 +1,6 @@
 # Task 1.2: IAudioFormatSpecification + AudioFormatInput
 
-Status: TODO
+Status: DONE
 Phase: 1
 Depends: -
 Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug`
@@ -37,4 +37,9 @@ Mirror `src/NzbDrone.Core/CustomFormats/`:
 - [ ] Namespace `NzbDrone.Core.AudioFormats`.
 
 ## Result
-_(fill on completion)_
+- Created `src/NzbDrone.Core/AudioFormats/IAudioFormatSpecification.cs` — mirrors
+  `ICustomFormatSpecification` (Order, InfoLink, ImplementationName, Name, Negate, Required,
+  Validate, Clone, IsSatisfiedBy) typed to `AudioFormatInput`.
+- Created `src/NzbDrone.Core/AudioFormats/AudioFormatInput.cs` — `MediaInfo` (MediaInfoModel) +
+  `SceneName`.
+- Build succeeded, 0 warnings. No references to CustomFormats internals.
