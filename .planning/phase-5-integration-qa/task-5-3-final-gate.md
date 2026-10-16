@@ -97,4 +97,4 @@ solution) fails StyleCop because `stylecop.json` is included via `$(SolutionDir)
 solution build or `-p:SolutionDir=$PWD/src/`; (b) `yarn` is not installed globally here — run via
 `npx yarn@1.22.22` (repo-pinned version).
 
-Commit: _(this + the following handoff commit)_
+Commit: 217240067f
