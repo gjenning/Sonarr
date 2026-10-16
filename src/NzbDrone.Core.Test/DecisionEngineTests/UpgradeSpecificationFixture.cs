@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using NUnit.Framework;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.DecisionEngine;
@@ -236,6 +237,108 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
                     new QualityModel(Quality.DVD),
                     new List<CustomFormat> { customFormatTwo })
                 .Should().Be(UpgradeableRejectReason.None);
+        }
+
+        private QualityProfile GivenAudioProfile(bool upgradeForAudio, int cutoffAudioFormatScore)
+        {
+            return new QualityProfile
+            {
+                Cutoff = Quality.HDTV720p.Id,
+                UpgradeAllowed = true,
+                UpgradeForAudio = upgradeForAudio,
+                CutoffAudioFormatScore = cutoffAudioFormatScore,
+                AudioFormatItems = new List<ProfileAudioFormatItem>
+                {
+                    new ProfileAudioFormatItem
+                    {
+                        Format = new AudioFormat("DTS-HD") { Id = 1 },
+                        Score = 10
+                    }
+                },
+                Items = Qualities.QualityFixture.GetDefaultQualities()
+            };
+        }
+
+        [Test]
+        public void should_allow_same_quality_when_audio_upgrade_is_pending()
+        {
+            var hdtv720p = new QualityModel(Quality.HDTV720p);
+
+            var profile = GivenAudioProfile(true, 10);
+
+            Subject.IsUpgradable(
+                    profile,
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    currentAudioScore: 0)
+                .Should().Be(UpgradeableRejectReason.None);
+        }
+
+        [Test]
+        public void should_reject_same_quality_when_upgrade_for_audio_is_disabled()
+        {
+            var hdtv720p = new QualityModel(Quality.HDTV720p);
+
+            var profile = GivenAudioProfile(false, 10);
+
+            Subject.IsUpgradable(
+                    profile,
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    currentAudioScore: 0)
+                .Should().Be(UpgradeableRejectReason.CustomFormatScore);
+        }
+
+        [Test]
+        public void should_reject_same_quality_when_audio_cutoff_is_already_met()
+        {
+            var hdtv720p = new QualityModel(Quality.HDTV720p);
+
+            var profile = GivenAudioProfile(true, 10);
+
+            Subject.IsUpgradable(
+                    profile,
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    currentAudioScore: 10)
+                .Should().Be(UpgradeableRejectReason.CustomFormatScore);
+        }
+
+        [Test]
+        public void should_reject_same_quality_when_current_audio_score_is_unknown()
+        {
+            var hdtv720p = new QualityModel(Quality.HDTV720p);
+
+            var profile = GivenAudioProfile(true, 10);
+
+            Subject.IsUpgradable(
+                    profile,
+                    hdtv720p,
+                    new List<CustomFormat>(),
+                    hdtv720p,
+                    new List<CustomFormat>())
+                .Should().Be(UpgradeableRejectReason.CustomFormatScore);
+        }
+
+        [Test]
+        public void should_not_allow_pending_audio_upgrade_to_bypass_quality_downgrade()
+        {
+            var profile = GivenAudioProfile(true, 10);
+
+            Subject.IsUpgradable(
+                    profile,
+                    new QualityModel(Quality.HDTV720p),
+                    new List<CustomFormat>(),
+                    new QualityModel(Quality.SDTV),
+                    new List<CustomFormat>(),
+                    currentAudioScore: 0)
+                .Should().Be(UpgradeableRejectReason.BetterQuality);
         }
     }
 }

@@ -1,6 +1,6 @@
 # Task 3.3: Audio-aware grab cutoff (UpgradableSpecification / UpgradeDiskSpecification)
 
-Status: TODO
+Status: DONE
 Phase: 3
 Depends: 2.1, 1.6
 Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~UpgradeDiskSpecification|FullyQualifiedName~UpgradableSpecification"`
@@ -41,8 +41,36 @@ quality would downgrade; regression suite unchanged.
 - Modify: fixtures above
 
 ## Acceptance Criteria
-- [ ] Bypass only when all conditions hold; never on video downgrade.
-- [ ] All existing decision-engine fixtures still green.
+- [x] Bypass only when all conditions hold; never on video downgrade.
+- [x] All existing decision-engine fixtures still green.
 
 ## Result
-_(fill on completion)_
+Done. Grab-time cutoff logic is now audio-aware:
+
+- `UpgradableSpecification.cs`: `IsUpgradable` and `CutoffNotMet` gained an optional
+  `int? currentAudioScore = null` parameter (null = audio unknown → no bypass, so existing
+  callers `QueueSpecification` / `HistorySpecification` compile and behave unchanged).
+  New private helper `IsAudioUpgradePending` implements the bypass rule:
+  `UpgradeForAudio && AudioFormatItems.Any() && currentAudioScore.HasValue && newQuality != null
+  && qualityCompare >= 0 && currentAudioScore < CutoffAudioFormatScore`.
+  In `IsUpgradable` the bypass sits after the BetterQuality/BetterRevision guards and before the
+  QualityCutoff rejection, so it can bypass QualityCutoff/CustomFormatScore/CustomFormatCutoff/
+  MinCustomFormatScore but never a video downgrade or revision downgrade. `CutoffNotMet` also
+  consults it (needed because `UpgradeDiskSpecification` rejects with "Existing file meets
+  cutoff" before ever calling `IsUpgradable`).
+- `UpgradeDiskSpecification.cs`: injected `IAudioFormatCalculationService`; new private
+  `GetExistingAudioScore` returns null when `file.MediaInfo == null`, otherwise
+  `qualityProfile.CalculateAudioFormatScore(_audioFormatService.ParseAudioFormats(file))`.
+  The score is computed once per file and passed into both `CutoffNotMet` and `IsUpgradable`
+  in the season-pack and single-episode paths. `UpgradeAllowedSpecification.cs` needed no change.
+- Tests: 5 new tests in `UpgradeSpecificationFixture.cs` (the task file said
+  `UpgradableSpecificationFixture.cs`, but that fixture doesn't exist — `UpgradeSpecificationFixture`
+  is the `UpgradableSpecification` test) and 4 new tests in `UpgradeDiskSpecificationFixture.cs`
+  covering: bypass allows same-quality grab when audio below cutoff; no bypass when
+  UpgradeForAudio false / audio cutoff already met / MediaInfo null (disk) or audio score
+  unknown (unit) / quality downgrade.
+
+Verify: `dotnet test src/NzbDrone.Core.Test -c Debug -p:SolutionDir="$PWD/src/" --filter
+"FullyQualifiedName~UpgradeDiskSpecification|FullyQualifiedName~UpgradeSpecification"` →
+87/87 passed (the task file's filter `~UpgradableSpecification` matches no fixture; `-p:SolutionDir`
+is needed so stylecop.json resolves). Broader `~DecisionEngineTests` run: 393/393 passed.

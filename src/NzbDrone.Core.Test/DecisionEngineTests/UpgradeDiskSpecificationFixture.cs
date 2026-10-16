@@ -5,12 +5,14 @@ using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using NzbDrone.Common.Serializer;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles;
@@ -113,6 +115,33 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
         {
             _parseResultMulti.CustomFormats = formats;
             _parseResultSingle.CustomFormats = formats;
+        }
+
+        private QualityProfile GivenAudioProfile(bool upgradeForAudio, int cutoffAudioFormatScore)
+        {
+            return new QualityProfile
+            {
+                Cutoff = Quality.HDTV720p.Id,
+                Items = Qualities.QualityFixture.GetDefaultQualities(),
+                UpgradeAllowed = true,
+                UpgradeForAudio = upgradeForAudio,
+                CutoffAudioFormatScore = cutoffAudioFormatScore,
+                AudioFormatItems = new List<ProfileAudioFormatItem>
+                {
+                    new ProfileAudioFormatItem
+                    {
+                        Format = new AudioFormat("DTS-HD") { Id = 1 },
+                        Score = 5
+                    }
+                }
+            };
+        }
+
+        private void GivenFileAudioFormats(List<AudioFormat> formats)
+        {
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                .Setup(x => x.ParseAudioFormats(It.IsAny<EpisodeFile>()))
+                .Returns(formats);
         }
 
         private void WithFirstFileUpgradable()
@@ -534,6 +563,52 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             var result = Subject.IsSatisfiedBy(_parseResultMulti, new());
 
             result.Accepted.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_accept_when_quality_cutoff_is_met_but_audio_upgrade_is_pending()
+        {
+            GivenProfile(GivenAudioProfile(true, 10));
+            GivenFileQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            GivenNewQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            _firstFile.MediaInfo = new MediaInfoModel();
+            GivenFileAudioFormats(new List<AudioFormat> { new AudioFormat("DTS-HD") { Id = 1 } });
+
+            Subject.IsSatisfiedBy(_parseResultSingle, new()).Accepted.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_reject_when_quality_cutoff_is_met_and_upgrade_for_audio_is_disabled()
+        {
+            GivenProfile(GivenAudioProfile(false, 10));
+            GivenFileQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            GivenNewQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            _firstFile.MediaInfo = new MediaInfoModel();
+            GivenFileAudioFormats(new List<AudioFormat> { new AudioFormat("DTS-HD") { Id = 1 } });
+
+            Subject.IsSatisfiedBy(_parseResultSingle, new()).Accepted.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_reject_when_quality_cutoff_is_met_and_audio_cutoff_is_already_met()
+        {
+            GivenProfile(GivenAudioProfile(true, 5));
+            GivenFileQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            GivenNewQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            _firstFile.MediaInfo = new MediaInfoModel();
+            GivenFileAudioFormats(new List<AudioFormat> { new AudioFormat("DTS-HD") { Id = 1 } });
+
+            Subject.IsSatisfiedBy(_parseResultSingle, new()).Accepted.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_reject_when_quality_cutoff_is_met_and_file_has_no_media_info()
+        {
+            GivenProfile(GivenAudioProfile(true, 10));
+            GivenFileQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+            GivenNewQuality(new QualityModel(Quality.HDTV720p, new Revision(version: 2)));
+
+            Subject.IsSatisfiedBy(_parseResultSingle, new()).Accepted.Should().BeFalse();
         }
     }
 }

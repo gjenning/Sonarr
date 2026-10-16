@@ -1,5 +1,6 @@
 using System.Linq;
 using NLog;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.MediaFiles;
@@ -12,16 +13,19 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         private readonly UpgradableSpecification _upgradableSpecification;
         private readonly IConfigService _configService;
         private readonly ICustomFormatCalculationService _formatService;
+        private readonly IAudioFormatCalculationService _audioFormatService;
         private readonly Logger _logger;
 
         public UpgradeDiskSpecification(UpgradableSpecification upgradableSpecification,
                                         IConfigService configService,
                                         ICustomFormatCalculationService formatService,
+                                        IAudioFormatCalculationService audioFormatService,
                                         Logger logger)
         {
             _configService = configService;
             _upgradableSpecification = upgradableSpecification;
             _formatService = formatService;
+            _audioFormatService = audioFormatService;
             _logger = logger;
         }
 
@@ -64,10 +68,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 {
                     _logger.Debug("Comparing file quality with report. Existing file is {0}.", file.Quality);
 
+                    var audioScore = GetExistingAudioScore(qualityProfile, file);
+
                     if (!_upgradableSpecification.CutoffNotMet(qualityProfile,
                             file.Quality,
                             _formatService.ParseCustomFormat(file),
-                            subject.ParsedEpisodeInfo.Quality))
+                            subject.ParsedEpisodeInfo.Quality,
+                            audioScore))
                     {
                         _logger.Debug("Cutoff already met for existing file, not an upgrade.");
                         continue;
@@ -79,7 +86,8 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                         file.Quality,
                         customFormats,
                         subject.ParsedEpisodeInfo.Quality,
-                        subject.CustomFormats);
+                        subject.CustomFormats,
+                        audioScore);
 
                     if (upgradeableRejectReason == UpgradeableRejectReason.None)
                     {
@@ -135,10 +143,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
             _logger.Debug("Comparing file quality with report. Existing file is {0}.", file.Quality);
 
+            var audioScore = GetExistingAudioScore(qualityProfile, file);
+
             if (!_upgradableSpecification.CutoffNotMet(qualityProfile,
                     file.Quality,
                     _formatService.ParseCustomFormat(file),
-                    subject.ParsedEpisodeInfo.Quality))
+                    subject.ParsedEpisodeInfo.Quality,
+                    audioScore))
             {
                 _logger.Debug("Cutoff already met, rejecting.");
                 var cutoff = qualityProfile.UpgradeAllowed ? qualityProfile.Cutoff : qualityProfile.FirststAllowedQuality().Id;
@@ -151,7 +162,8 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 file.Quality,
                 customFormats,
                 subject.ParsedEpisodeInfo.Quality,
-                subject.CustomFormats);
+                subject.CustomFormats,
+                audioScore);
 
             switch (upgradeableRejectReason)
             {
@@ -181,6 +193,16 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             }
 
             return null;
+        }
+
+        private int? GetExistingAudioScore(NzbDrone.Core.Profiles.Qualities.QualityProfile qualityProfile, NzbDrone.Core.MediaFiles.EpisodeFile file)
+        {
+            if (file.MediaInfo == null)
+            {
+                return null;
+            }
+
+            return qualityProfile.CalculateAudioFormatScore(_audioFormatService.ParseAudioFormats(file));
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
@@ -10,9 +11,9 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 {
     public interface IUpgradableSpecification
     {
-        UpgradeableRejectReason IsUpgradable(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats);
+        UpgradeableRejectReason IsUpgradable(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats, int? currentAudioScore = null);
         bool QualityCutoffNotMet(QualityProfile profile, QualityModel currentQuality, QualityModel newQuality = null);
-        bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality = null);
+        bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality = null, int? currentAudioScore = null);
         bool IsRevisionUpgrade(QualityModel currentQuality, QualityModel newQuality);
         bool IsUpgradeAllowed(QualityProfile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats);
     }
@@ -28,7 +29,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             _logger = logger;
         }
 
-        public UpgradeableRejectReason IsUpgradable(QualityProfile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats)
+        public UpgradeableRejectReason IsUpgradable(QualityProfile qualityProfile, QualityModel currentQuality, List<CustomFormat> currentCustomFormats, QualityModel newQuality, List<CustomFormat> newCustomFormats, int? currentAudioScore = null)
         {
             var qualityComparer = new QualityModelComparer(qualityProfile);
             var qualityCompare = qualityComparer.Compare(newQuality?.Quality, currentQuality.Quality);
@@ -70,6 +71,15 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             {
                 _logger.Debug("Existing item has a better quality revision, skipping. Existing: {0}. New: {1}", currentQuality, newQuality);
                 return UpgradeableRejectReason.BetterRevision;
+            }
+
+            if (IsAudioUpgradePending(qualityProfile, currentQuality, newQuality, currentAudioScore))
+            {
+                _logger.Debug("New item can upgrade audio. Existing: {0} [{1}]. Audio Cutoff: {2}",
+                    currentQuality,
+                    currentAudioScore,
+                    qualityProfile.CutoffAudioFormatScore);
+                return UpgradeableRejectReason.None;
             }
 
             if (qualityCompare > 0)
@@ -147,7 +157,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             return score < cutoff;
         }
 
-        public bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null)
+        public bool CutoffNotMet(QualityProfile profile, QualityModel currentQuality, List<CustomFormat> currentFormats, QualityModel newQuality = null, int? currentAudioScore = null)
         {
             if (QualityCutoffNotMet(profile, currentQuality, newQuality))
             {
@@ -159,12 +169,37 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return true;
             }
 
+            if (IsAudioUpgradePending(profile, currentQuality, newQuality, currentAudioScore))
+            {
+                return true;
+            }
+
             _logger.Debug("Existing item meets cut-off, skipping. Existing: {0} [{1}] ({2})",
                 currentQuality,
                 currentFormats.ConcatToString(),
                 profile.CalculateCustomFormatScore(currentFormats));
 
             return false;
+        }
+
+        private bool IsAudioUpgradePending(QualityProfile profile, QualityModel currentQuality, QualityModel newQuality, int? currentAudioScore)
+        {
+            if (!profile.UpgradeForAudio ||
+                !profile.AudioFormatItems.Any() ||
+                !currentAudioScore.HasValue ||
+                newQuality == null)
+            {
+                return false;
+            }
+
+            var qualityCompare = new QualityModelComparer(profile).Compare(newQuality.Quality, currentQuality.Quality);
+
+            if (qualityCompare < 0)
+            {
+                return false;
+            }
+
+            return currentAudioScore < profile.CutoffAudioFormatScore;
         }
 
         public bool IsRevisionUpgrade(QualityModel currentQuality, QualityModel newQuality)
