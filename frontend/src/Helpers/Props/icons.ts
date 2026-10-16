@@ -3,6 +3,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Asterisk,
+  AudioLines,
   Ban,
   Bookmark,
   BookmarkX,
@@ -118,6 +119,7 @@ export const ALTERNATE_TITLES = Captions;
 export const ADVANCED_SETTINGS = Settings;
 export const ARROW_LEFT = CircleChevronLeft;
 export const ARROW_RIGHT = CircleChevronRight;
+export const AUDIO_FORMAT = AudioLines;
 export const BACKUP = FileArchive;
 export const BLOCKLIST = Ban;
 export const BUG = Bug;

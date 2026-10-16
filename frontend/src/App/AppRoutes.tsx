@@ -10,6 +10,7 @@ import CalendarPage from 'Calendar/CalendarPage';
 import NotFound from 'Components/NotFound';
 import SeriesDetailsPage from 'Series/Details/SeriesDetailsPage';
 import SeriesIndex from 'Series/Index/SeriesIndex';
+import AudioFormatSettingsPage from 'Settings/AudioFormats/AudioFormatSettingsPage';
 import CustomFormatSettingsPage from 'Settings/CustomFormats/CustomFormatSettingsPage';
 import DownloadClientSettings from 'Settings/DownloadClients/DownloadClientSettings';
 import GeneralSettings from 'Settings/General/GeneralSettings';
@@ -110,6 +111,11 @@ export function appRouteElements() {
       <Route
         path="/settings/customformats"
         element={<CustomFormatSettingsPage />}
+      />
+
+      <Route
+        path="/settings/audioformats"
+        element={<AudioFormatSettingsPage />}
       />
 
       <Route path="/settings/indexers" element={<IndexerSettings />} />

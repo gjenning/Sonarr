@@ -42,6 +42,12 @@ function buildSections(): SectionEntry[] {
       summary: translate('CustomFormatsSettingsSummary'),
     },
     {
+      to: '/settings/audioformats',
+      iconName: icons.AUDIO_FORMAT,
+      title: translate('CustomAudioFormats'),
+      summary: translate('CustomAudioFormatsSettingsSummary'),
+    },
+    {
       to: '/settings/indexers',
       iconName: icons.RSS,
       title: translate('Indexers'),
