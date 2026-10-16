@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.Parser.Model;
@@ -24,6 +25,8 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
         public string DownloadId { get; set; }
         public List<CustomFormat> CustomFormats { get; set; } = new();
         public int CustomFormatScore { get; set; }
+        public List<AudioFormat> AudioFormats { get; set; } = new();
+        public int AudioFormatScore { get; set; }
         public int IndexerFlags { get; set; }
         public ReleaseType ReleaseType { get; set; }
         public IEnumerable<ImportRejection> Rejections { get; set; } = new List<ImportRejection>();

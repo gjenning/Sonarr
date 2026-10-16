@@ -461,6 +461,12 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
                 {
                     item.CustomFormats = _localEpisodeFormatCalculator.ParseEpisodeCustomFormats(decision.LocalEpisode);
                     item.CustomFormatScore = item.Series.QualityProfile?.Value.CalculateCustomFormatScore(item.CustomFormats) ?? 0;
+
+                    // Re-parse instead of copying decision.LocalEpisode.AudioFormats: on some
+                    // paths (ReprocessItem) the ImportDecisionMaker hook ran before Augment,
+                    // so MediaInfo was not available yet. Mirrors the custom-format handling.
+                    item.AudioFormats = _audioFormatCalculator.ParseAudioFormats(decision.LocalEpisode);
+                    item.AudioFormatScore = item.Series.QualityProfile?.Value.CalculateAudioFormatScore(item.AudioFormats) ?? 0;
                 }
             }
 
@@ -487,6 +493,8 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
             item.Rejections = Enumerable.Empty<ImportRejection>();
             item.EpisodeFileId = episodeFile.Id;
             item.CustomFormats = _formatCalculator.ParseCustomFormat(episodeFile, series);
+            item.AudioFormats = _audioFormatCalculator.ParseAudioFormats(episodeFile);
+            item.AudioFormatScore = series.QualityProfile?.Value.CalculateAudioFormatScore(item.AudioFormats) ?? 0;
 
             return item;
         }

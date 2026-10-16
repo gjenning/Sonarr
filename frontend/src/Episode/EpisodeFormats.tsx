@@ -1,10 +1,9 @@
 import React from 'react';
 import Label from 'Components/Label';
 import { kinds } from 'Helpers/Props';
-import { CustomFormat } from 'Settings/CustomFormats/CustomFormats/useCustomFormats';
 
 interface EpisodeFormatsProps {
-  formats: CustomFormat[];
+  formats: Array<{ id: number; name: string }>;
 }
 
 function EpisodeFormats({ formats }: EpisodeFormatsProps) {

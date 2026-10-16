@@ -5,6 +5,7 @@ import Language from 'Language/Language';
 import { QualityModel } from 'Quality/Quality';
 import Series from 'Series/Series';
 import { CustomFormat } from 'Settings/CustomFormats/CustomFormats/useCustomFormats';
+import { AudioFormat } from 'typings/AudioFormat';
 import Rejection from 'typings/Rejection';
 
 export interface InteractiveImportCommandOptions {
@@ -35,6 +36,8 @@ interface InteractiveImport extends ModelBase {
   episodes: Episode[];
   qualityWeight: number;
   customFormats: CustomFormat[];
+  audioFormats?: AudioFormat[];
+  audioFormatScore?: number;
   indexerFlags: number;
   releaseType: ReleaseType;
   rejections: Rejection[];

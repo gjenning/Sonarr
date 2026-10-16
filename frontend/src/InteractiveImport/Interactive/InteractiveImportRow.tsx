@@ -31,6 +31,7 @@ import Language from 'Language/Language';
 import { QualityModel } from 'Quality/Quality';
 import Series from 'Series/Series';
 import { CustomFormat } from 'Settings/CustomFormats/CustomFormats/useCustomFormats';
+import { AudioFormat } from 'typings/AudioFormat';
 import { SelectStateInputProps } from 'typings/props';
 import Rejection from 'typings/Rejection';
 import formatBytes from 'Utilities/Number/formatBytes';
@@ -67,6 +68,8 @@ interface InteractiveImportRowProps {
   releaseType: ReleaseType;
   customFormats?: CustomFormat[];
   customFormatScore?: number;
+  audioFormats?: AudioFormat[];
+  audioFormatScore?: number;
   indexerFlags: number;
   rejections: Rejection[];
   columns: Column[];
@@ -93,6 +96,8 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
     releaseType,
     customFormats = [],
     customFormatScore,
+    audioFormats = [],
+    audioFormatScore,
     indexerFlags,
     rejections,
     isReprocessing,
@@ -513,6 +518,21 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
             body={
               <div className={styles.customFormatTooltip}>
                 <EpisodeFormats formats={customFormats} />
+              </div>
+            }
+            position={tooltipPositions.LEFT}
+          />
+        ) : null}
+        {audioFormats?.length ? (
+          <Popover
+            anchor={formatCustomFormatScore(
+              audioFormatScore,
+              audioFormats.length
+            )}
+            title={translate('CustomAudioFormats')}
+            body={
+              <div className={styles.customFormatTooltip}>
+                <EpisodeFormats formats={audioFormats} />
               </div>
             }
             position={tooltipPositions.LEFT}
