@@ -93,4 +93,4 @@ Deviations from the task file:
 Verify: `dotnet build src/Sonarr.sln -c Debug` succeeded; `~EpisodeImport` tests 240 passed / 3 skipped;
 `npx tsc --noEmit -p frontend/tsconfig.json` clean; eslint clean on changed frontend files.
 
-Commit: PENDING
+Commit: 0e83b8a92c
