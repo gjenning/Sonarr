@@ -72,4 +72,4 @@ Still requires a human before merge (flag in 5.3 regression review):
 - Live "Update Media Info" run against a real library (item 11 verified by mechanism + unit tests).
 - Item 10 end-to-end once task 4.6 lands.
 
-Commit: _(fill after commit)_
+Commit: f23f47eaf2
