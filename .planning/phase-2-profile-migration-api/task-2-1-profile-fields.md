@@ -1,6 +1,6 @@
 # Task 2.1: QualityProfile audio fields + ProfileAudioFormatItem
 
-Status: TODO
+Status: DONE
 Phase: 2
 Depends: 1.3
 Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug -p:SolutionDir=$PWD/src/`

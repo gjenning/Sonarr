@@ -11,6 +11,8 @@ namespace NzbDrone.Core.Profiles.Qualities
         public QualityProfile()
         {
             FormatItems = new List<ProfileFormatItem>();
+            AudioFormatItems = new List<ProfileAudioFormatItem>();
+            AudioUpgradeRequiresTitleHint = true;
         }
 
         public string Name { get; set; }
@@ -21,6 +23,11 @@ namespace NzbDrone.Core.Profiles.Qualities
         public int MinUpgradeFormatScore { get; set; }
         public List<ProfileFormatItem> FormatItems { get; set; }
         public List<QualityProfileQualityItem> Items { get; set; }
+        public List<ProfileAudioFormatItem> AudioFormatItems { get; set; }
+        public int MinAudioFormatScore { get; set; }
+        public int CutoffAudioFormatScore { get; set; }
+        public bool UpgradeForAudio { get; set; }
+        public bool AudioUpgradeRequiresTitleHint { get; set; }
 
         public Quality FirststAllowedQuality()
         {

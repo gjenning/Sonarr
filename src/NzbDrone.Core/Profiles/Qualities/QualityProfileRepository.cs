@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Messaging.Events;
@@ -14,18 +15,22 @@ namespace NzbDrone.Core.Profiles.Qualities
     public class QualityProfileRepository : BasicRepository<QualityProfile>, IQualityProfileRepository
     {
         private readonly ICustomFormatService _customFormatService;
+        private readonly IAudioFormatService _audioFormatService;
 
         public QualityProfileRepository(IMainDatabase database,
                                         IEventAggregator eventAggregator,
-                                        ICustomFormatService customFormatService)
+                                        ICustomFormatService customFormatService,
+                                        IAudioFormatService audioFormatService)
             : base(database, eventAggregator)
         {
             _customFormatService = customFormatService;
+            _audioFormatService = audioFormatService;
         }
 
         protected override List<QualityProfile> Query(SqlBuilder builder)
         {
             var cfs = _customFormatService.All().ToDictionary(c => c.Id);
+            var audioFormats = _audioFormatService.All().ToDictionary(a => a.Id);
 
             var profiles = base.Query(builder);
 
@@ -48,6 +53,21 @@ namespace NzbDrone.Core.Profiles.Qualities
                 }
 
                 profile.FormatItems = formatItems;
+
+                var audioFormatItems = new List<ProfileAudioFormatItem>();
+
+                foreach (var audioFormatItem in profile.AudioFormatItems ?? new List<ProfileAudioFormatItem>())
+                {
+                    // Skip any audio format that has been removed, but the profile wasn't updated properly
+                    if (audioFormats.ContainsKey(audioFormatItem.Format.Id))
+                    {
+                        audioFormatItem.Format = audioFormats[audioFormatItem.Format.Id];
+
+                        audioFormatItems.Add(audioFormatItem);
+                    }
+                }
+
+                profile.AudioFormatItems = audioFormatItems;
             }
 
             return profiles;

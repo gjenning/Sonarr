@@ -192,6 +192,7 @@ namespace NzbDrone.Core.Datastore
             SqlMapper.AddTypeHandler(new DapperQualityIntConverter());
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<QualityProfileQualityItem>>(new QualityIntConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<ProfileFormatItem>>(new CustomFormatIntConverter()));
+            SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<ProfileAudioFormatItem>>(new AudioFormatIntConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<ICustomFormatSpecification>>(new CustomFormatSpecificationListConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<IAudioFormatSpecification>>(new AudioFormatSpecificationListConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<IAutoTaggingSpecification>>(new AutoTaggingSpecificationConverter()));

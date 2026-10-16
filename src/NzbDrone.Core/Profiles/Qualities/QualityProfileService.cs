@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.AudioFormats;
+using NzbDrone.Core.AudioFormats.Events;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.CustomFormats.Events;
 using NzbDrone.Core.ImportLists;
@@ -27,11 +29,14 @@ namespace NzbDrone.Core.Profiles.Qualities
     public class QualityProfileService : IQualityProfileService,
                                          IHandle<ApplicationStartedEvent>,
                                          IHandle<CustomFormatAddedEvent>,
-                                         IHandle<CustomFormatDeletedEvent>
+                                         IHandle<CustomFormatDeletedEvent>,
+                                         IHandle<AudioFormatAddedEvent>,
+                                         IHandle<AudioFormatDeletedEvent>
     {
         private readonly IQualityProfileRepository _qualityProfileRepository;
         private readonly IImportListFactory _importListFactory;
         private readonly ICustomFormatService _formatService;
+        private readonly IAudioFormatService _audioFormatService;
         private readonly ISeriesService _seriesService;
         private readonly IQualityProfileRankService _rankService;
         private readonly IEventAggregator _eventAggregator;
@@ -40,6 +45,7 @@ namespace NzbDrone.Core.Profiles.Qualities
         public QualityProfileService(IQualityProfileRepository qualityProfileRepository,
                                      IImportListFactory importListFactory,
                                      ICustomFormatService formatService,
+                                     IAudioFormatService audioFormatService,
                                      ISeriesService seriesService,
                                      IQualityProfileRankService rankService,
                                      IEventAggregator eventAggregator,
@@ -48,6 +54,7 @@ namespace NzbDrone.Core.Profiles.Qualities
             _qualityProfileRepository = qualityProfileRepository;
             _importListFactory = importListFactory;
             _formatService = formatService;
+            _audioFormatService = audioFormatService;
             _seriesService = seriesService;
             _rankService = rankService;
             _eventAggregator = eventAggregator;
@@ -201,6 +208,40 @@ namespace NzbDrone.Core.Profiles.Qualities
             }
         }
 
+        public void Handle(AudioFormatAddedEvent message)
+        {
+            var all = All();
+
+            foreach (var profile in all)
+            {
+                profile.AudioFormatItems.Insert(0, new ProfileAudioFormatItem
+                {
+                    Score = 0,
+                    Format = message.AudioFormat
+                });
+
+                Update(profile);
+            }
+        }
+
+        public void Handle(AudioFormatDeletedEvent message)
+        {
+            var all = All();
+
+            foreach (var profile in all)
+            {
+                profile.AudioFormatItems = profile.AudioFormatItems.Where(f => f.Format.Id != message.AudioFormat.Id).ToList();
+
+                if (profile.AudioFormatItems.Empty())
+                {
+                    profile.MinAudioFormatScore = 0;
+                    profile.CutoffAudioFormatScore = 0;
+                }
+
+                Update(profile);
+            }
+        }
+
         public QualityProfile GetDefaultProfile(string name, Quality cutoff = null, params Quality[] allowed)
         {
             var groupedQualites = Quality.DefaultQualityDefinitions.GroupBy(q => q.Weight);
@@ -256,6 +297,12 @@ namespace NzbDrone.Core.Profiles.Qualities
                 Format = format
             }).ToList();
 
+            var audioFormatItems = _audioFormatService.All().Select(format => new ProfileAudioFormatItem
+            {
+                Score = 0,
+                Format = format
+            }).ToList();
+
             var qualityProfile = new QualityProfile
                                  {
                                      Name = name,
@@ -264,7 +311,10 @@ namespace NzbDrone.Core.Profiles.Qualities
                                      MinFormatScore = 0,
                                      CutoffFormatScore = 0,
                                      MinUpgradeFormatScore = 1,
-                                     FormatItems = formatItems
+                                     FormatItems = formatItems,
+                                     MinAudioFormatScore = 0,
+                                     CutoffAudioFormatScore = 0,
+                                     AudioFormatItems = audioFormatItems
                                  };
 
             return qualityProfile;
