@@ -1,0 +1,59 @@
+# Task 1.5: AudioStreamSpecification (all fields)
+
+Status: TODO
+Phase: 1
+Depends: 1.2
+Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~AudioFormats"`
+
+## Goal
+The single generic specification that matches MediaInfo audio streams: `AudioStreamSpecification`
+with a `Field` selector — `Codec, Channels, Bitrate, Title, Language, AudioDescription,
+StreamCount` — plus unit tests. This is the heart of the feature.
+
+## Context
+Matching semantics (locked decision): **an audio format matches iff at least one audio stream
+satisfies every spec in the group** (each spec's `Negate` applies per-stream). So
+`[Codec~truehd, Lang=eng, NOT AudioDescription]` matches iff some stream is non-AD English
+TrueHD.
+
+Field semantics:
+- `Codec` — regex vs `MediaInfoFormatter.FormatAudioCodec(stream, input.SceneName)` strings
+  ("TrueHD Atmos", "EAC3 Atmos", "DTS-HD MA", "AC3", "FLAC", …).
+- `Channels` — regex vs `MediaInfoFormatter.FormatAudioChannels(stream)` ("5.1", "7.1", "2.0").
+- `Bitrate` — numeric compare (`>=`, `<=`, `=` operator selector or regex on kbps int; pick one,
+  document in code).
+- `Title` — regex vs `stream.Title`.
+- `Language` — Sonarr `Language` id(s) vs `stream.Languages` (see how
+  `CustomFormats/Specifications/LanguageSpecification.cs` handles include/exclude + unknown).
+- `AudioDescription` — bool: stream is AD if `stream.VisualImpaired` (task 1.1) OR
+  `stream.Title` matches `(?i)\b(ad|audio\s*descri\w*)\b`.
+- `StreamCount` — numeric compare on total audio stream count (evaluated on the stream set, not
+  per-stream; document this exception).
+
+Mirror the CF spec pattern for schema metadata: `[FieldDefinition]`/`Enum` inputs so the API
+schema endpoint (2.3) can render it. Look at
+`src/NzbDrone.Core/CustomFormats/Specifications/RegexSpecification.cs` and
+`IndexerFlagsSpecification.cs` for value-type + enum-field patterns.
+
+## Files
+- Create: `src/NzbDrone.Core/AudioFormats/Specifications/AudioStreamSpecification.cs`
+  (+ small enum types in same file or `AudioStreamField.cs`)
+- Test: `src/NzbDrone.Core.Test/AudioFormats/AudioStreamSpecificationFixture.cs`
+
+## Steps
+1. Define `AudioStreamField` enum + `AudioStreamSpecification : IAudioFormatSpecification` with
+   `Field`, `Value` (string), `Negate`, `Required`, `Order`.
+2. Implement per-field evaluation in `IsSatisfiedBy(AudioFormatInput)`: iterate
+   `input.MediaInfo.AudioStreams`, all active specs must pass on one stream (the group logic
+   lives in 1.6's calculator — this spec evaluates itself per-stream; expose a
+   `IsSatisfiedBy(AudioFormatInput, MediaInfoAudioStreamModel)` overload for the calculator).
+3. Validation: regex fields validate the regex on save (like CF regex specs do).
+4. Unit tests: each field positive + negated; multi-stream group scenario (TrueHD AD + TrueHD
+   non-AD + AC3 → `[Codec~truehd, NOT AD]` matches); AD via title regex; StreamCount.
+
+## Acceptance Criteria
+- [ ] All 7 fields implemented with documented compare semantics.
+- [ ] Group/negate semantics covered by tests; tests pass.
+
+## Result
+_(fill on completion)_

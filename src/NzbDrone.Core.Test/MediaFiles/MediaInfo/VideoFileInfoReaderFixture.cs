@@ -67,6 +67,19 @@ namespace NzbDrone.Core.Test.MediaFiles.MediaInfo
         }
 
         [Test]
+        public void get_info_audio_disposition()
+        {
+            var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Files", "Media", "H264_sample.mp4");
+
+            var info = Subject.GetMediaInfo(path);
+
+            info.AudioStreams.Should().HaveCount(1);
+            info.PrimaryAudioStream.Default.Should().BeTrue();
+            info.PrimaryAudioStream.Forced.Should().BeFalse();
+            info.PrimaryAudioStream.VisualImpaired.Should().BeFalse();
+        }
+
+        [Test]
         public void get_info_unicode()
         {
             var srcPath = Path.Combine(TestContext.CurrentContext.TestDirectory, "Files", "Media", "H264_sample.mp4");

@@ -21,8 +21,8 @@ namespace NzbDrone.Core.MediaFiles.MediaInfo
         private readonly IDiskProvider _diskProvider;
         private readonly Logger _logger;
 
-        public const int MINIMUM_MEDIA_INFO_SCHEMA_REVISION = 14;
-        public const int CURRENT_MEDIA_INFO_SCHEMA_REVISION = 14;
+        public const int MINIMUM_MEDIA_INFO_SCHEMA_REVISION = 15;
+        public const int CURRENT_MEDIA_INFO_SCHEMA_REVISION = 15;
 
         private static readonly string[] ValidHdrColourPrimaries = { "bt2020" };
         private static readonly string[] HlgTransferFunctions = { "arib-std-b67" };
@@ -108,6 +108,21 @@ namespace NzbDrone.Core.MediaFiles.MediaInfo
                         else if ((stream.Tags?.TryGetValue("name", out var audioName) ?? false) && audioName.IsNotNullOrWhiteSpace())
                         {
                             model.Title = audioName.Trim();
+                        }
+
+                        if (stream.Disposition?.TryGetValue("default", out var defaultAudio) ?? false)
+                        {
+                            model.Default = defaultAudio;
+                        }
+
+                        if (stream.Disposition?.TryGetValue("forced", out var forcedAudio) ?? false)
+                        {
+                            model.Forced = forcedAudio;
+                        }
+
+                        if (stream.Disposition?.TryGetValue("visual_impaired", out var visualImpairedAudio) ?? false)
+                        {
+                            model.VisualImpaired = visualImpairedAudio;
                         }
 
                         return  model;

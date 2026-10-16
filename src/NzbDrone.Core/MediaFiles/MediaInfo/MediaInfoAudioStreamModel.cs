@@ -12,4 +12,7 @@ public class MediaInfoAudioStreamModel : IEmbeddedDocument
     public int Channels { get; set; }
     public string ChannelPositions { get; set; }
     public string Title { get; set; }
+    public bool Default { get; set; }
+    public bool Forced { get; set; }
+    public bool VisualImpaired { get; set; }
 }
