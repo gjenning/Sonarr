@@ -4,6 +4,7 @@ using FizzWare.NBuilder;
 using FluentAssertions;
 using Moq;
 using NUnit.Framework;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Datastore;
@@ -11,6 +12,7 @@ using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.EpisodeImport;
 using NzbDrone.Core.MediaFiles.EpisodeImport.Specifications;
+using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles;
 using NzbDrone.Core.Profiles.Qualities;
@@ -608,6 +610,237 @@ namespace NzbDrone.Core.Test.MediaFiles.EpisodeImport.Specifications
             var result = Subject.IsSatisfiedBy(_localEpisode, null);
             result.Accepted.Should().BeFalse();
             result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgradeAfterRename);
+        }
+
+        [Test]
+        public void should_return_true_if_upgrade_to_audio_format_score()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+            var newAudioFormat = new AudioFormat { Id = 2, Name = "Atmos" };
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 },
+                new ProfileAudioFormatItem { Format = newAudioFormat, Score = 20 }
+            });
+
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                  .Setup(s => s.ParseAudioFormats(episodeFile))
+                  .Returns(new List<AudioFormat> { existingAudioFormat });
+
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat, newAudioFormat };
+
+            Subject.IsSatisfiedBy(_localEpisode, null).Accepted.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_return_false_if_audio_format_score_is_not_higher()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 }
+            });
+
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                  .Setup(s => s.ParseAudioFormats(episodeFile))
+                  .Returns(new List<AudioFormat> { existingAudioFormat });
+
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat };
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgrade);
+        }
+
+        [Test]
+        public void should_return_false_if_existing_audio_format_score_meets_cutoff()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+            var newAudioFormat = new AudioFormat { Id = 2, Name = "Atmos" };
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 10, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 },
+                new ProfileAudioFormatItem { Format = newAudioFormat, Score = 20 }
+            });
+
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                  .Setup(s => s.ParseAudioFormats(episodeFile))
+                  .Returns(new List<AudioFormat> { existingAudioFormat });
+
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat, newAudioFormat };
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgrade);
+        }
+
+        [Test]
+        public void should_return_false_if_upgrade_for_audio_is_disabled()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+            var newAudioFormat = new AudioFormat { Id = 2, Name = "Atmos" };
+
+            GivenAudioProfile(upgradeForAudio: false, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 },
+                new ProfileAudioFormatItem { Format = newAudioFormat, Score = 20 }
+            });
+
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat, newAudioFormat };
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgrade);
+
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                  .Verify(s => s.ParseAudioFormats(It.IsAny<EpisodeFile>()), Times.Never);
+        }
+
+        [Test]
+        public void should_return_false_if_no_audio_formats_on_profile()
+        {
+            GivenCustomFormatDowngradeScenario();
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>());
+
+            _localEpisode.AudioFormats = Builder<AudioFormat>.CreateListOfSize(1).Build().ToList();
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgrade);
+        }
+
+        [Test]
+        public void should_return_false_if_existing_episode_file_has_no_media_info()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+            episodeFile.MediaInfo = null;
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+            var newAudioFormat = new AudioFormat { Id = 2, Name = "Atmos" };
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 },
+                new ProfileAudioFormatItem { Format = newAudioFormat, Score = 20 }
+            });
+
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat, newAudioFormat };
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgrade);
+        }
+
+        [Test]
+        public void should_return_false_if_local_episode_has_no_media_info()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+            _localEpisode.MediaInfo = null;
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+            var newAudioFormat = new AudioFormat { Id = 2, Name = "Atmos" };
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 },
+                new ProfileAudioFormatItem { Format = newAudioFormat, Score = 20 }
+            });
+
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                  .Setup(s => s.ParseAudioFormats(episodeFile))
+                  .Returns(new List<AudioFormat> { existingAudioFormat });
+
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat, newAudioFormat };
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotCustomFormatUpgrade);
+        }
+
+        [Test]
+        public void should_return_false_if_video_quality_is_downgrade_even_with_audio_upgrade()
+        {
+            var episodeFile = GivenCustomFormatDowngradeScenario();
+
+            var existingAudioFormat = new AudioFormat { Id = 1, Name = "7.1" };
+            var newAudioFormat = new AudioFormat { Id = 2, Name = "Atmos" };
+
+            GivenAudioProfile(upgradeForAudio: true, cutoffAudioFormatScore: 50, items: new List<ProfileAudioFormatItem>
+            {
+                new ProfileAudioFormatItem { Format = existingAudioFormat, Score = 10 },
+                new ProfileAudioFormatItem { Format = newAudioFormat, Score = 20 }
+            });
+
+            Mocker.GetMock<IAudioFormatCalculationService>()
+                  .Setup(s => s.ParseAudioFormats(episodeFile))
+                  .Returns(new List<AudioFormat> { existingAudioFormat });
+
+            _localEpisode.Quality = new QualityModel(Quality.Bluray720p);
+            _localEpisode.AudioFormats = new List<AudioFormat> { existingAudioFormat, newAudioFormat };
+
+            var result = Subject.IsSatisfiedBy(_localEpisode, null);
+            result.Accepted.Should().BeFalse();
+            result.Reason.Should().Be(ImportRejectionReason.NotQualityUpgrade);
+        }
+
+        private EpisodeFile GivenCustomFormatDowngradeScenario()
+        {
+            var episodeFileCustomFormats = Builder<CustomFormat>.CreateListOfSize(1).Build().ToList();
+
+            var episodeFile = new EpisodeFile
+            {
+                Quality = new QualityModel(Quality.Bluray1080p),
+                MediaInfo = new MediaInfoModel { AudioStreams = new List<MediaInfoAudioStreamModel>() }
+            };
+
+            _series.QualityProfile.Value.FormatItems = episodeFileCustomFormats.Select(c => new ProfileFormatItem
+            {
+                Format = c,
+                Score = 50
+            })
+                .ToList();
+
+            Mocker.GetMock<IConfigService>()
+                .Setup(s => s.DownloadPropersAndRepacks)
+                .Returns(ProperDownloadTypes.DoNotPrefer);
+
+            Mocker.GetMock<ICustomFormatCalculationService>()
+                .Setup(s => s.ParseCustomFormat(episodeFile))
+                .Returns(episodeFileCustomFormats);
+
+            _localEpisode.Quality = new QualityModel(Quality.Bluray1080p);
+            _localEpisode.CustomFormats = Builder<CustomFormat>.CreateListOfSize(1).Build().ToList();
+            _localEpisode.CustomFormatScore = 20;
+            _localEpisode.MediaInfo = new MediaInfoModel { AudioStreams = new List<MediaInfoAudioStreamModel>() };
+
+            _localEpisode.Episodes = Builder<Episode>.CreateListOfSize(1)
+                .All()
+                .With(e => e.EpisodeFileId = 1)
+                .With(e => e.EpisodeFile = new LazyLoaded<EpisodeFile>(episodeFile))
+                .Build()
+                .ToList();
+
+            return episodeFile;
+        }
+
+        private void GivenAudioProfile(bool upgradeForAudio, int cutoffAudioFormatScore, List<ProfileAudioFormatItem> items)
+        {
+            var profile = _series.QualityProfile.Value;
+            profile.UpgradeForAudio = upgradeForAudio;
+            profile.CutoffAudioFormatScore = cutoffAudioFormatScore;
+            profile.AudioFormatItems = items;
         }
     }
 }

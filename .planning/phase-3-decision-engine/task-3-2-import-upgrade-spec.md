@@ -1,6 +1,6 @@
 # Task 3.2: Audio-aware import UpgradeSpecification
 
-Status: TODO
+Status: DONE
 Phase: 3
 Depends: 3.1
 Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~UpgradeSpecification"`
@@ -39,8 +39,31 @@ audioUpgradeEligible =
 - Modify: `src/NzbDrone.Core.Test/MediaFiles/EpisodeImport/Specifications/UpgradeSpecificationFixture.cs`
 
 ## Acceptance Criteria
-- [ ] All new cases + regressions pass.
-- [ ] Rejection reasons use the existing `Reason.Rejected` pattern with a clear message.
+- [x] All new cases + regressions pass.
+- [x] Rejection reasons use the existing `Reason.Rejected` pattern with a clear message.
 
 ## Result
-_(fill on completion)_
+Implemented in `UpgradeSpecification.cs`:
+- Injected `IAudioFormatCalculationService` (constructor; DI auto-wires, no manual constructions exist).
+- In the `qualityCompare == 0 && newFormatScore < currentFormatScore` reject branch, a new
+  private `IsAudioUpgradeEligible(localEpisode, episodeFile, qualityProfile)` check runs first.
+  When eligible (UpgradeForAudio, profile has audio format items, both MediaInfos present,
+  existing audio score < cutoff, new audio score > existing), the release is accepted
+  (`continue`) with a debug log. Otherwise the existing CF rejection logic runs unchanged,
+  so rejection reasons (`NotCustomFormatUpgrade` / `NotCustomFormatUpgradeAfterRename`) are
+  preserved — no new `ImportRejectionReason` needed.
+- Eligibility gates run cheap checks before calling the audio service, so profiles without
+  audio formats never touch it (regression-safe).
+- `qualityCompare < 0` rejection untouched (no video downgrade for audio — locked decision).
+
+Tests added to `UpgradeSpecificationFixture.cs` (8 new, plus 2 helpers
+`GivenCustomFormatDowngradeScenario` / `GivenAudioProfile`):
+- audio upgrade approved; rejected when audio score not higher; rejected when existing meets
+  audio cutoff; rejected when `UpgradeForAudio` false (audio service never called);
+  rejected when profile has no audio format items; rejected when existing file MediaInfo null;
+  rejected when local episode MediaInfo null; regression: video downgrade + better audio is
+  still rejected (`NotQualityUpgrade`). All 45 pre-existing tests act as the
+  "no audio formats → identical outcomes" regression.
+
+Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~UpgradeSpecification" -p:SolutionDir=$PWD/src/`
+→ Passed! Failed: 0, Passed: 53, Skipped: 0, Total: 53.

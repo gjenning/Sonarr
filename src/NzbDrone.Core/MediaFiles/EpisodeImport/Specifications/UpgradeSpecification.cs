@@ -1,10 +1,12 @@
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Parser.Model;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.MediaFiles.EpisodeImport.Specifications
@@ -13,14 +15,17 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Specifications
     {
         private readonly IConfigService _configService;
         private readonly ICustomFormatCalculationService _formatService;
+        private readonly IAudioFormatCalculationService _audioFormatService;
         private readonly Logger _logger;
 
         public UpgradeSpecification(IConfigService configService,
                                     ICustomFormatCalculationService formatService,
+                                    IAudioFormatCalculationService audioFormatService,
                                     Logger logger)
         {
             _configService = configService;
             _formatService = formatService;
+            _audioFormatService = audioFormatService;
             _logger = logger;
         }
 
@@ -67,6 +72,17 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Specifications
 
                 if (qualityCompare == 0 && newFormatScore < currentFormatScore)
                 {
+                    if (IsAudioUpgradeEligible(localEpisode, episodeFile, qualityProfile))
+                    {
+                        _logger.Debug("New item's custom formats [{0}] ({1}) do not improve on [{2}] ({3}), but audio formats improve on existing file's audio, accepting",
+                            newFormats != null ? newFormats.ConcatToString() : "",
+                            newFormatScore,
+                            currentFormats != null ? currentFormats.ConcatToString() : "",
+                            currentFormatScore);
+
+                        continue;
+                    }
+
                     _logger.Debug("New item's custom formats [{0}] ({1}) do not improve on [{2}] ({3}), skipping",
                         newFormats != null ? newFormats.ConcatToString() : "",
                         newFormatScore,
@@ -101,6 +117,26 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Specifications
             }
 
             return ImportSpecDecision.Accept();
+        }
+
+        private bool IsAudioUpgradeEligible(LocalEpisode localEpisode, EpisodeFile episodeFile, QualityProfile qualityProfile)
+        {
+            if (!qualityProfile.UpgradeForAudio ||
+                !qualityProfile.AudioFormatItems.Any())
+            {
+                return false;
+            }
+
+            if (episodeFile.MediaInfo == null || localEpisode.MediaInfo == null)
+            {
+                return false;
+            }
+
+            var existingAudioScore = qualityProfile.CalculateAudioFormatScore(_audioFormatService.ParseAudioFormats(episodeFile));
+            var newAudioScore = qualityProfile.CalculateAudioFormatScore(localEpisode.AudioFormats);
+
+            return existingAudioScore < qualityProfile.CutoffAudioFormatScore &&
+                   newAudioScore > existingAudioScore;
         }
     }
 }
