@@ -1,6 +1,6 @@
 # Task 3.5: MinAudioFormatScore import gate (optional)
 
-Status: TODO
+Status: DONE
 Phase: 3
 Depends: 3.1
 Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~AudioFormatAllowed"`
@@ -29,8 +29,30 @@ Fixture: new file under `src/NzbDrone.Core.Test/MediaFiles/EpisodeImport/Specifi
 - Create: import spec + fixture
 
 ## Acceptance Criteria
-- [ ] Below-min rejected, at/above min passes, null MediaInfo passes.
-- [ ] Import test suite green.
+- [x] Below-min rejected, at/above min passes, null MediaInfo passes.
+- [x] Import test suite green.
 
 ## Result
-_(fill on completion)_
+Done. New import-time min-audio-score gate, mirroring the grab-time CF `MinFormatScore` gate.
+
+- `AudioFormatAllowedByProfileSpecification.cs` (new import spec): accepts immediately when
+  `MinAudioFormatScore <= 0` or `localEpisode.MediaInfo == null` (can't judge); otherwise
+  computes `qualityProfile.CalculateAudioFormatScore(localEpisode.AudioFormats)` (same
+  access pattern as `UpgradeSpecification`; formats are already populated on the local
+  episode by `ImportDecisionMaker` before specs run) and rejects with new
+  `ImportRejectionReason.AudioFormatMinimumScore` when below min.
+- Second file touched: added `AudioFormatMinimumScore` to `ImportRejectionReason` enum
+  (in-memory/transient API value only, not persisted — same pattern as task 3.4's
+  `DownloadRejectionReason` addition).
+- No manual DI registration needed: import specs are auto-registered as
+  `IEnumerable<IImportDecisionEngineSpecification>` implementations (no sibling spec has
+  explicit registration).
+- Tests: `AudioFormatAllowedByProfileSpecificationFixture.cs` — 6 cases: min not set,
+  below-min rejected (+ reason assertion), no-matching-formats rejected, at-min accepted,
+  above-min accepted, null MediaInfo accepted.
+
+Verify: `dotnet test src/NzbDrone.Core.Test -c Debug -p:SolutionDir="$PWD/src/" --filter
+"FullyQualifiedName~AudioFormatAllowed"` → 6/6 passed (SolutionDir flag needed for the
+pre-existing stylecop.json resolution issue, same as tasks 3.2/3.4). Broader
+`~MediaFiles.EpisodeImport` run: 238 passed, 0 failed, 3 skipped (pre-existing
+Windows-only skips).
