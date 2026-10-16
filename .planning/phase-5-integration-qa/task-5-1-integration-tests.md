@@ -54,3 +54,5 @@ Deviations / notes:
   is undefined when building/testing a single project (SA1200 floods). Workaround used:
   `dotnet build src/Sonarr.sln -c Debug` first, then
   `dotnet test src/NzbDrone.Integration.Test -c Debug --filter "FullyQualifiedName~AudioFormat" -p:SolutionDir=$PWD/src/`.
+
+Commit: 465cf316de
