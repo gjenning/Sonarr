@@ -58,3 +58,5 @@ Deviations from the task file:
 
 Verify: `yarn typecheck` exit 0, `yarn build` exit 0 (via `npx yarn@1.22.22` — yarn not
 globally installed); eslint clean on all touched frontend files; en.json valid JSON.
+
+Commit: 5a92883647
