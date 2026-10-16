@@ -42,6 +42,7 @@ expose the same dictionary; AD tracks are typically flagged `visual_impaired=1`.
 - [ ] Existing + new VideoFileInfoReader tests pass.
 
 ## Result
+Commit: `4c39d401d6`
 Done as specified:
 - `MediaInfoAudioStreamModel`: added `Default`, `Forced`, `VisualImpaired` (non-nullable `bool`,
   default false; kept per task spec — note the subtitle model uses `bool?`).
