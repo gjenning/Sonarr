@@ -2,7 +2,7 @@
 
 Status: TODO
 Phase: 5
-Depends: 5.1, 5.2, 4.5
+Depends: 5.1, 5.2, 4.5, 4.6
 Verify: `dotnet build src/Sonarr.sln -c Debug && dotnet test src/NzbDrone.Core.Test -c Debug`
 
 ## Goal

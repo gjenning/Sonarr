@@ -15,6 +15,7 @@ Pattern to mirror throughout: `frontend/src/Settings/CustomFormats/` (page, moda
 | 4.3 | Edit modal + specification editor |
 | 4.4 | Quality profile editor section |
 | 4.5 | Lint/typecheck/build pass + polish |
+| 4.6 | Manual import preview shows audio formats + score (found by 5.2 QA) |
 
 Verify at phase end:
 ```bash
