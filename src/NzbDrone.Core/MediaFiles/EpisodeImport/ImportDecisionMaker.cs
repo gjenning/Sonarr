@@ -4,6 +4,7 @@ using System.Linq;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.MediaFiles.EpisodeImport.Aggregation;
@@ -30,6 +31,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport
         private readonly IDetectSample _detectSample;
         private readonly ITrackedDownloadService _trackedDownloadService;
         private readonly ILocalEpisodeCustomFormatCalculationService _formatCalculator;
+        private readonly IAudioFormatCalculationService _audioFormatCalculator;
         private readonly Logger _logger;
 
         public ImportDecisionMaker(IEnumerable<IImportDecisionEngineSpecification> specifications,
@@ -39,6 +41,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport
                                    IDetectSample detectSample,
                                    ITrackedDownloadService trackedDownloadService,
                                    ILocalEpisodeCustomFormatCalculationService formatCalculator,
+                                   IAudioFormatCalculationService audioFormatCalculator,
                                    Logger logger)
         {
             _specifications = specifications;
@@ -48,6 +51,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport
             _detectSample = detectSample;
             _trackedDownloadService = trackedDownloadService;
             _formatCalculator = formatCalculator;
+            _audioFormatCalculator = audioFormatCalculator;
             _logger = logger;
         }
 
@@ -151,6 +155,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport
                     }
 
                     _formatCalculator.UpdateEpisodeCustomFormats(localEpisode);
+                    _audioFormatCalculator.UpdateEpisodeAudioFormats(localEpisode);
 
                     decision = GetDecision(localEpisode, downloadClientItem);
                 }

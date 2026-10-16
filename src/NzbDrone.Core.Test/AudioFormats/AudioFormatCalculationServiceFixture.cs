@@ -4,10 +4,14 @@ using FizzWare.NBuilder;
 using FluentAssertions;
 using NUnit.Framework;
 using NzbDrone.Core.AudioFormats;
+using NzbDrone.Core.Datastore;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Parser.Model;
+using NzbDrone.Core.Profiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Test.Framework;
+using NzbDrone.Core.Tv;
 
 namespace NzbDrone.Core.Test.AudioFormats
 {
@@ -327,6 +331,54 @@ namespace NzbDrone.Core.Test.AudioFormats
             GivenFormats(new AudioFormat("TrueHD", Spec(AudioStreamField.Codec, "truehd")));
 
             Subject.ParseAudioFormats(localEpisode).Should().BeEmpty();
+        }
+
+        [Test]
+        public void should_update_local_episode_formats_and_score()
+        {
+            GivenStreams(AudioStream(codec: "truehd"));
+
+            var format = new AudioFormat("TrueHD", Spec(AudioStreamField.Codec, "truehd"));
+            GivenFormats(format);
+
+            var profile = new QualityProfile
+            {
+                AudioFormatItems = new List<ProfileAudioFormatItem>
+                {
+                    new ProfileAudioFormatItem { Format = format, Score = 10 }
+                }
+            };
+
+            var localEpisode = Builder<LocalEpisode>.CreateNew()
+                .With(e => e.MediaInfo, _mediaInfo)
+                .With(e => e.SceneName, "Show.Title.S01E01")
+                .With(e => e.Path, "/series/show/s01e01.mkv")
+                .With(e => e.Series, Builder<Series>.CreateNew()
+                    .With(s => s.QualityProfile, new LazyLoaded<QualityProfile>(profile))
+                    .Build())
+                .Build();
+
+            Subject.UpdateEpisodeAudioFormats(localEpisode);
+
+            localEpisode.AudioFormats.Select(f => f.Name).Should().Equal("TrueHD");
+            localEpisode.AudioFormatScore.Should().Be(10);
+        }
+
+        [Test]
+        public void should_update_local_episode_with_empty_formats_without_media_info()
+        {
+            var localEpisode = Builder<LocalEpisode>.CreateNew()
+                .With(e => e.MediaInfo, null)
+                .With(e => e.SceneName, "Show.Title.S01E01")
+                .With(e => e.Path, "/series/show/s01e01.mkv")
+                .Build();
+
+            GivenFormats(new AudioFormat("TrueHD", Spec(AudioStreamField.Codec, "truehd")));
+
+            Subject.UpdateEpisodeAudioFormats(localEpisode);
+
+            localEpisode.AudioFormats.Should().BeEmpty();
+            localEpisode.AudioFormatScore.Should().Be(0);
         }
     }
 }

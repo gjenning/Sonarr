@@ -1,6 +1,6 @@
 # Task 3.1: LocalEpisode.AudioFormats + import-time scoring hook
 
-Status: TODO
+Status: DONE
 Phase: 3
 Depends: 1.6, 2.1
 Verify: `dotnet test src/NzbDrone.Core.Test -c Debug --filter "FullyQualifiedName~EpisodeImport"`
@@ -32,9 +32,47 @@ formats are computed.
   missing)
 
 ## Acceptance Criteria
-- [ ] After `ImportDecisionMaker.GetDecision`, `localEpisode.AudioFormats` is populated when
+- [x] After `ImportDecisionMaker.GetDecision`, `localEpisode.AudioFormats` is populated when
       MediaInfo exists; empty when MediaInfo null.
-- [ ] Existing import tests still pass (no behavior change yet — specs don't read it until 3.2).
+- [x] Existing import tests still pass (no behavior change yet — specs don't read it until 3.2).
 
 ## Result
-_(fill on completion)_
+`LocalEpisode` now carries `List<AudioFormat> AudioFormats` + `int AudioFormatScore`, populated
+at import-decision time exactly parallel to custom formats:
+
+- `LocalEpisode.cs`: added `AudioFormats` (defaults to empty list) + `AudioFormatScore` right
+  after the CF properties.
+- `AudioFormatCalculationService`: added `UpdateEpisodeAudioFormats(LocalEpisode)` to the
+  interface + impl — sets `AudioFormats` via the existing `ParseAudioFormats(LocalEpisode)`
+  overload and computes `AudioFormatScore` from `Series?.QualityProfile?.Value` (null-safe:
+  no series/profile/MediaInfo → empty formats + score 0).
+- `QualityProfile`: added `CalculateAudioFormatScore(List<AudioFormat>)` mirroring
+  `CalculateCustomFormatScore` (sums scores of `AudioFormatItems` whose format matched).
+- `ImportDecisionMaker`: injected `IAudioFormatCalculationService`; calls
+  `UpdateEpisodeAudioFormats` immediately after `UpdateEpisodeCustomFormats` in
+  `GetDecision` (~line 155).
+- `ManualImportService` (`MediaFiles/EpisodeImport/Manual/ManualImportService.cs`): injected
+  `IAudioFormatCalculationService`; added the audio call after both
+  `UpdateEpisodeCustomFormats` sites (`ReprocessItem` ~188, `Execute` ~556).
+- Tests: 2 new tests in `AudioFormatCalculationServiceFixture` (formats + score written to
+  LocalEpisode from profile; empty formats/score without MediaInfo).
+
+Verify: `dotnet test src/NzbDrone.Core.Test -c Debug -p:SolutionDir=$PWD/src/ --filter
+"FullyQualifiedName~EpisodeImport"` → Passed 224, Failed 0, Skipped 3. AudioFormats filter →
+Passed 96, Failed 0.
+
+Deviations / notes:
+- Task file listed `MediaFiles/ManualImportService.cs`; actual path is
+  `MediaFiles/EpisodeImport/Manual/ManualImportService.cs`.
+- Task's third `UpdateEpisodeCustomFormats` site (~line 457) is actually a
+  `ParseEpisodeCustomFormats` call that fills `ManualImportItem.CustomFormats` for UI display,
+  not a LocalEpisode update — skipped. Surfacing audio formats in manual-import UI responses
+  needs API/frontend changes (phase 4).
+- Task text suggested "formats on LocalEpisode; score computed later where CF score is
+  computed". The actual CF pattern computes the score *inside* the update method from
+  `Series.QualityProfile?.Value`, so `UpdateEpisodeAudioFormats` does the same (required
+  adding `CalculateAudioFormatScore` to `QualityProfile` — file not listed in the task's
+  Files section).
+- `dotnet test`/`build` needs `-p:SolutionDir=$PWD/src/` in this environment or StyleCop
+  SA1200 errors appear in `NzbDrone.Test.Common`.
+

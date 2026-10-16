@@ -6,6 +6,7 @@ using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.TrackedDownloads;
@@ -42,6 +43,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
         private readonly IMediaFileService _mediaFileService;
         private readonly ICustomFormatCalculationService _formatCalculator;
         private readonly ILocalEpisodeCustomFormatCalculationService _localEpisodeFormatCalculator;
+        private readonly IAudioFormatCalculationService _audioFormatCalculator;
         private readonly IEventAggregator _eventAggregator;
         private readonly Logger _logger;
 
@@ -58,6 +60,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
                                    IMediaFileService mediaFileService,
                                    ILocalEpisodeCustomFormatCalculationService localEpisodeFormatCalculator,
                                    ICustomFormatCalculationService formatCalculator,
+                                   IAudioFormatCalculationService audioFormatCalculator,
                                    IEventAggregator eventAggregator,
                                    Logger logger)
         {
@@ -74,6 +77,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
             _mediaFileService = mediaFileService;
             _localEpisodeFormatCalculator = localEpisodeFormatCalculator;
             _formatCalculator = formatCalculator;
+            _audioFormatCalculator = audioFormatCalculator;
             _eventAggregator = eventAggregator;
             _logger = logger;
         }
@@ -184,6 +188,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
                 localEpisode.ReleaseType = releaseType;
 
                 _localEpisodeFormatCalculator.UpdateEpisodeCustomFormats(localEpisode);
+                _audioFormatCalculator.UpdateEpisodeAudioFormats(localEpisode);
 
                 // Augment episode file so imported files have all additional information an automatic import would
                 localEpisode = _aggregationService.Augment(localEpisode, downloadClientItem);
@@ -551,6 +556,7 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport.Manual
                 }
 
                 _localEpisodeFormatCalculator.UpdateEpisodeCustomFormats(localEpisode);
+                _audioFormatCalculator.UpdateEpisodeAudioFormats(localEpisode);
 
                 // TODO: Cleanup non-tracked downloads
 

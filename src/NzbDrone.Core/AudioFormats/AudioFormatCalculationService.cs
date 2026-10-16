@@ -14,6 +14,7 @@ namespace NzbDrone.Core.AudioFormats
         List<AudioFormat> ParseAudioFormats(MediaInfoModel mediaInfo, string sceneName);
         List<AudioFormat> ParseAudioFormats(EpisodeFile episodeFile);
         List<AudioFormat> ParseAudioFormats(LocalEpisode localEpisode);
+        void UpdateEpisodeAudioFormats(LocalEpisode localEpisode);
     }
 
     public class AudioFormatCalculationService : IAudioFormatCalculationService
@@ -62,6 +63,12 @@ namespace NzbDrone.Core.AudioFormats
                     SceneName = localEpisode.GetSceneOrFileName()
                 },
                 _audioFormatService.All());
+        }
+
+        public void UpdateEpisodeAudioFormats(LocalEpisode localEpisode)
+        {
+            localEpisode.AudioFormats = ParseAudioFormats(localEpisode);
+            localEpisode.AudioFormatScore = localEpisode.Series?.QualityProfile?.Value.CalculateAudioFormatScore(localEpisode.AudioFormats) ?? 0;
         }
 
         private string GetReleaseTitle(EpisodeFile episodeFile)

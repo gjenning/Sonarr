@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Languages;
@@ -36,6 +37,8 @@ namespace NzbDrone.Core.Parser.Model
         public bool OtherVideoFiles { get; set; }
         public List<CustomFormat> CustomFormats { get; set; } = [];
         public int CustomFormatScore { get; set; }
+        public List<AudioFormat> AudioFormats { get; set; } = [];
+        public int AudioFormatScore { get; set; }
         public List<CustomFormat> OriginalFileNameCustomFormats { get; set; } = [];
         public int OriginalFileNameCustomFormatScore { get; set; }
         public GrabbedReleaseInfo Release { get; set; }

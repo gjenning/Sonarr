@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Qualities;
@@ -98,6 +99,11 @@ namespace NzbDrone.Core.Profiles.Qualities
         public int CalculateCustomFormatScore(List<CustomFormat> formats)
         {
             return FormatItems.Where(x => formats.Contains(x.Format)).Sum(x => x.Score);
+        }
+
+        public int CalculateAudioFormatScore(List<AudioFormat> formats)
+        {
+            return AudioFormatItems.Where(x => formats.Contains(x.Format)).Sum(x => x.Score);
         }
     }
 }
