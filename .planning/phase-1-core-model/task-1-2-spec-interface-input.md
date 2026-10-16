@@ -3,7 +3,7 @@
 Status: DONE
 Phase: 1
 Depends: -
-Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug`
+Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug -p:SolutionDir=$PWD/src/`
 
 ## Goal
 Create the specification plumbing for audio formats: the spec interface, the input object handed

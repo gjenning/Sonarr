@@ -3,7 +3,7 @@
 Status: TODO
 Phase: 2
 Depends: 1.3
-Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug`
+Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug -p:SolutionDir=$PWD/src/`
 
 ## Goal
 Extend `QualityProfile` with audio scoring fields and the embedded score-item list.

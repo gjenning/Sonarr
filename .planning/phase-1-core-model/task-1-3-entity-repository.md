@@ -3,7 +3,7 @@
 Status: DONE
 Phase: 1
 Depends: 1.2
-Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug`
+Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug -p:SolutionDir=$PWD/src/`
 
 ## Goal
 `AudioFormat` persisted entity with an embedded specification list, mirroring `CustomFormat`.
