@@ -1,6 +1,6 @@
 # Task 1.3: AudioFormat entity + repository + TableMapping
 
-Status: TODO
+Status: DONE
 Phase: 1
 Depends: 1.2
 Verify: `dotnet build src/NzbDrone.Core/Sonarr.Core.csproj -c Debug`
@@ -39,4 +39,13 @@ Mirror `src/NzbDrone.Core/CustomFormats/CustomFormat.cs`:
 - [ ] Core builds.
 
 ## Result
-_(fill on completion)_
+- Created `AudioFormat` entity (Name + `List<IAudioFormatSpecification>`, no rename flag),
+  `AudioFormatRepository`/`IAudioFormatRepository` — both mirror the CustomFormats equivalents.
+- Created `Datastore/Converters/AudioFormatSpecificationConverter.cs` (`AudioFormatSpecificationListConverter`)
+  mirroring `CustomFormatSpecificationListConverter`; type resolution targets
+  `NzbDrone.Core.AudioFormats.{typename}, Sonarr.Core`.
+- `TableMapping.cs`: registered `AudioFormats` table + embedded-list type handler.
+- Core builds, 0 warnings.
+- Deviation: no round-trip test added — the referenced `CustomFormatTableMappingFixture.cs` does
+  not exist in this repo, and the converter resolves spec types from the Sonarr.Core assembly, so
+  a meaningful round-trip needs a concrete spec (arrives in task 1.5; add it there).

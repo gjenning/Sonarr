@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dapper;
 using NzbDrone.Common.Reflection;
+using NzbDrone.Core.AudioFormats;
 using NzbDrone.Core.Authentication;
 using NzbDrone.Core.AutoTagging.Specifications;
 using NzbDrone.Core.Blocklisting;
@@ -143,6 +144,7 @@ namespace NzbDrone.Core.Datastore
                   .Ignore(d => d.PreferredSize);
 
             Mapper.Entity<CustomFormat>("CustomFormats").RegisterModel();
+            Mapper.Entity<AudioFormat>("AudioFormats").RegisterModel();
 
             Mapper.Entity<QualityProfile>("QualityProfiles").RegisterModel();
             Mapper.Entity<QualityProfileQualityRank>("QualityProfileQualityRanks").RegisterModel();
@@ -191,6 +193,7 @@ namespace NzbDrone.Core.Datastore
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<QualityProfileQualityItem>>(new QualityIntConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<ProfileFormatItem>>(new CustomFormatIntConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<ICustomFormatSpecification>>(new CustomFormatSpecificationListConverter()));
+            SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<IAudioFormatSpecification>>(new AudioFormatSpecificationListConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<List<IAutoTaggingSpecification>>(new AutoTaggingSpecificationConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<QualityModel>(new QualityIntConverter()));
             SqlMapper.AddTypeHandler(new EmbeddedDocumentConverter<Dictionary<string, string>>());
