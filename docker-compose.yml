@@ -1,0 +1,29 @@
+services:
+  sonarr:
+    # Builds for the native architecture. Multi-arch (amd64+arm64) images are
+    # produced by the CI workflows (.github/workflows/docker.yml,
+    # .forgejo/workflows/docker.yml).
+    build:
+      context: .
+    image: sonarr-local
+    container_name: sonarr
+    ports:
+      - "8989:8989"
+    environment:
+      # Disable authentication (trusted local instance only)
+      # Sonarr__Auth__Method: None
+      # To use Forms auth with fixed initial credentials instead, comment out 
+      # Method: None above and uncomment these. They only take effect on the
+      # first startup against an empty /config (user is created once):
+      Sonarr__Auth__Method: Form
+      Sonarr__Auth__InitialUsername: admin
+      Sonarr__Auth__InitialPassword: change-me
+    volumes:
+      # App config + database, survives rebuilds
+      - sonarr-config:/config
+      # Map your media library here
+      - ./data:/data
+    restart: unless-stopped
+
+volumes:
+  sonarr-config:

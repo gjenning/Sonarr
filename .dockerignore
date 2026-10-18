@@ -1,0 +1,28 @@
+# Version control
+.git
+.github
+
+# Local build artifacts (rebuilt inside the image)
+_output*
+_temp
+_tests
+node_modules
+**/bin
+**/obj
+
+# Not needed for the image build
+docker
+distribution
+scripts
+schemas
+docs
+*.md
+LICENSE.md
+SECURITY.md
+CLA.md
+AGENTS.md
+CONTRIBUTING.md
+FUNDING.yml
+.dockerignore
+Dockerfile
+docker-compose.yml
