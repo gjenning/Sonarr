@@ -145,6 +145,10 @@ const GROUPS: SidebarGroup[] = [
             title: () => translate('CustomFormats'),
             to: '/settings/customformats',
           },
+          {
+            title: () => translate('CustomAudioFormats'),
+            to: '/settings/audioformats',
+          },
           { title: () => translate('Indexers'), to: '/settings/indexers' },
           {
             title: () => translate('DownloadClients'),

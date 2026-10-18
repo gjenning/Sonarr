@@ -5,6 +5,7 @@ using NzbDrone.Core.MediaFiles.EpisodeImport;
 using NzbDrone.Core.MediaFiles.EpisodeImport.Manual;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
+using Sonarr.Api.V5.AudioFormats;
 using Sonarr.Api.V5.CustomFormats;
 using Sonarr.Api.V5.Episodes;
 using Sonarr.Api.V5.Series;
@@ -30,6 +31,8 @@ public class ManualImportResource : RestResource
     public string? DownloadId { get; set; }
     public List<CustomFormatResource> CustomFormats { get; set; } = [];
     public int CustomFormatScore { get; set; }
+    public List<AudioFormatResource> AudioFormats { get; set; } = [];
+    public int AudioFormatScore { get; set; }
     public int IndexerFlags { get; set; }
     public ReleaseType ReleaseType { get; set; }
     public IEnumerable<ImportRejectionResource> Rejections { get; set; } = [];
@@ -41,6 +44,9 @@ public static class ManualImportResourceMapper
     {
         var customFormats = model.CustomFormats;
         var customFormatScore = model.Series?.QualityProfile?.Value?.CalculateCustomFormatScore(customFormats) ?? 0;
+
+        var audioFormats = model.AudioFormats;
+        var audioFormatScore = model.Series?.QualityProfile?.Value?.CalculateAudioFormatScore(audioFormats) ?? 0;
 
         return new ManualImportResource
         {
@@ -59,6 +65,8 @@ public static class ManualImportResourceMapper
             Languages = model.Languages,
             CustomFormats = customFormats.ToResource(false),
             CustomFormatScore = customFormatScore,
+            AudioFormats = audioFormats.ToResource(false),
+            AudioFormatScore = audioFormatScore,
 
             // QualityWeight
             DownloadId = model.DownloadId,
