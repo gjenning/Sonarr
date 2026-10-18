@@ -14,6 +14,11 @@ namespace Sonarr.Api.V5.AudioFormats
         public bool Required { get; set; }
         public required List<Field> Fields { get; set; }
         public List<AudioFormatSpecificationSchema>? Presets { get; set; }
+
+        // Per-field dropdown options (field name -> allowed exact values) for fields whose
+        // value is drawn from a fixed set, e.g. Codec and Channels. Values outside the list
+        // are still accepted by the API and matched as regex.
+        public Dictionary<string, List<string>>? ValueOptions { get; set; }
     }
 
     public static class AudioFormatSpecificationSchemaMapper
@@ -28,7 +33,8 @@ namespace Sonarr.Api.V5.AudioFormats
                 InfoLink = model.InfoLink,
                 Negate = model.Negate,
                 Required = model.Required,
-                Fields = SchemaBuilder.ToSchema(model)
+                Fields = SchemaBuilder.ToSchema(model),
+                ValueOptions = AudioStreamValueOptions.ByField
             };
         }
     }

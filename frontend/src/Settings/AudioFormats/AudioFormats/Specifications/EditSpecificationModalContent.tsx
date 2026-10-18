@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Form from 'Components/Form/Form';
 import FormInput from 'Components/Form/FormInput';
 import FormInputHelpText from 'Components/Form/FormInputHelpText';
@@ -13,7 +13,7 @@ import ModalFooter from 'Components/Modal/ModalFooter';
 import ModalHeader from 'Components/Modal/ModalHeader';
 import { usePendingChangesStore } from 'Helpers/Hooks/usePendingChangesStore';
 import { usePendingFieldsStore } from 'Helpers/Hooks/usePendingFieldsStore';
-import { inputTypes, kinds } from 'Helpers/Props';
+import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import { useFilteredLanguages } from 'Language/useLanguages';
 import { AudioFormatSpecification } from 'typings/AudioFormat';
 import { FieldSelectOption } from 'typings/Field';
@@ -26,8 +26,10 @@ import {
   getValueWidget,
   parseComparison,
   parseLanguageIds,
+  parseOptionList,
   serializeComparison,
   serializeLanguageIds,
+  serializeOptionList,
 } from './audioStreamValue';
 import styles from './EditSpecificationModalContent.module.css';
 
@@ -53,6 +55,8 @@ function getValueHelpText(widget: AudioStreamValueWidget): string | undefined {
       return translate('AudioFormatValueHelpTextLanguage');
     case 'boolean':
       return translate('AudioFormatValueHelpTextAudioDescription');
+    case 'options':
+      return translate('AudioFormatValueHelpTextOptions');
     default:
       return undefined;
   }
@@ -108,7 +112,49 @@ function EditSpecificationModalContent({
   )?.name;
   const widget = getValueWidget(fieldName);
 
+  // The API serializes dictionary keys in camelCase ("codec") while the field select
+  // option names are enum member names ("Codec"), so match the key case-insensitively.
+  const optionList = useMemo(() => {
+    if (!fieldName || !specification.valueOptions) {
+      return [];
+    }
+
+    const key = Object.keys(specification.valueOptions).find(
+      (optionKey) => optionKey.toLowerCase() === fieldName.toLowerCase()
+    );
+
+    return key ? specification.valueOptions[key] : [];
+  }, [specification.valueOptions, fieldName]);
+
+  // Fields with dropdown options fall back to the text box when the schema provides none.
+  const isOptionsField = widget === 'options' && optionList.length > 0;
+  const effectiveWidget: AudioStreamValueWidget =
+    widget === 'options' && !isOptionsField ? 'text' : widget;
+
   const valueString = valueField?.value == null ? '' : String(valueField.value);
+
+  const parsedOptions = useMemo(
+    () => parseOptionList(valueString, optionList),
+    [valueString, optionList]
+  );
+
+  // Dropdown fields can be switched to a free-form regex text box. Undefined means "derive
+  // from the stored value": a value that is not a pure option list (e.g. a legacy regex)
+  // opens in regex mode, mirroring the backend's option-list-vs-regex interpretation.
+  const [regexOverride, setRegexOverride] = useState<boolean | undefined>(
+    undefined
+  );
+
+  const isRegexMode =
+    isOptionsField && (regexOverride ?? parsedOptions.mode === 'regex');
+  const showOptions = isOptionsField && !isRegexMode;
+  const showText = effectiveWidget === 'text' || isRegexMode;
+
+  // The modal content stays mounted between opens, so drop a previous toggle when a
+  // different specification is opened.
+  useEffect(() => {
+    setRegexOverride(undefined);
+  }, [specification]);
 
   const { name, negate, required } = item;
   const { implementationName } = item;
@@ -138,9 +184,16 @@ function EditSpecificationModalContent({
     []
   );
 
+  const optionSelectValues = useMemo(
+    () => optionList.map((option) => ({ key: option, value: option })),
+    [optionList]
+  );
+
   const comparison = useMemo(() => parseComparison(valueString), [valueString]);
 
-  const valueHelpText = getValueHelpText(widget);
+  const valueHelpText = getValueHelpText(
+    isRegexMode ? 'text' : effectiveWidget
+  );
 
   const handleInputChange = useCallback(
     ({ name: key, value }: InputChanged) => {
@@ -165,9 +218,33 @@ function EditSpecificationModalContent({
       // switching field resets it instead of carrying over an invalid value.
       setPendingField('field', value);
       setPendingField('value', '');
+      setRegexOverride(undefined);
     },
     [setPendingField]
   );
+
+  const handleOptionChange = useCallback(
+    ({ value }: InputChanged<string[]>) => {
+      setPendingField('value', serializeOptionList(value));
+    },
+    [setPendingField]
+  );
+
+  const handleRegexTogglePress = useCallback(() => {
+    if (isRegexMode) {
+      // Back to the dropdown; a hand-written regex that is not an option list is dropped
+      // rather than silently kept out of view.
+      if (parsedOptions.mode === 'list') {
+        setPendingField('value', serializeOptionList(parsedOptions.values));
+      } else {
+        setPendingField('value', '');
+      }
+
+      setRegexOverride(false);
+    } else {
+      setRegexOverride(true);
+    }
+  }, [isRegexMode, parsedOptions, setPendingField]);
 
   const handleNumberChange = useCallback(
     ({ value }: InputChanged<number | null>) => {
@@ -232,7 +309,7 @@ function EditSpecificationModalContent({
           validationErrors={validationErrors}
           validationWarnings={validationWarnings}
         >
-          {widget === 'text' ? (
+          {showText ? (
             <p className={styles.intro}>
               <InlineMarkdown
                 data={translate('ConditionUsingRegularExpressions')}
@@ -281,7 +358,7 @@ function EditSpecificationModalContent({
 
             {valueHelpText ? <FormInputHelpText text={valueHelpText} /> : null}
 
-            {widget === 'text' ? (
+            {showText ? (
               <FormInput
                 type={inputTypes.TEXT}
                 name="value"
@@ -291,6 +368,31 @@ function EditSpecificationModalContent({
                 pending={valueField?.pending}
                 onChange={handleFieldChange}
               />
+            ) : null}
+
+            {showOptions ? (
+              <FormInput
+                type={inputTypes.SELECT}
+                name="value"
+                value={
+                  parsedOptions.mode === 'list' ? parsedOptions.values : []
+                }
+                values={optionSelectValues}
+                errors={valueField?.errors}
+                warnings={valueField?.warnings}
+                pending={valueField?.pending}
+                onChange={handleOptionChange}
+              />
+            ) : null}
+
+            {isOptionsField ? (
+              <Button size={sizes.SMALL} onPress={handleRegexTogglePress}>
+                {translate(
+                  isRegexMode
+                    ? 'AudioFormatValueSelectFromList'
+                    : 'AudioFormatValueCustomRegex'
+                )}
+              </Button>
             ) : null}
 
             {widget === 'number' ? (

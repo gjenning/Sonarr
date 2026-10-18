@@ -68,7 +68,7 @@ namespace NzbDrone.Core.AudioFormats
         [FieldDefinition(1, Label = "Field", Type = FieldType.Select, SelectOptions = typeof(AudioStreamField))]
         public AudioStreamField Field { get; set; }
 
-        [FieldDefinition(2, Label = "Value", HelpText = "Regex for Codec/Channels/Title, comma-separated Language ids, true/false for AudioDescription, numeric comparison (>=, <=, >, <, =) for Bitrate (kbps) and StreamCount")]
+        [FieldDefinition(2, Label = "Value", HelpText = "Exact value or comma-separated list for Codec/Channels (regex is still supported), comma-separated Language ids, true/false for AudioDescription, numeric comparison (>=, <=, >, <, =) for Bitrate (kbps) and StreamCount")]
         public string Value { get; set; } = "";
 
         public IAudioFormatSpecification Clone()
@@ -239,6 +239,24 @@ namespace NzbDrone.Core.AudioFormats
             }
         }
 
+        // A value whose comma-separated tokens are all known options (see
+        // AudioStreamValueOptions) is matched as an exact, case-insensitive list; anything
+        // else keeps regex semantics so hand-written conditions keep working. Returns null
+        // when the value is not a pure option list, meaning the caller should fall back to
+        // regex matching.
+        private static bool? MatchesOptionList(string value, List<string> options, string actual)
+        {
+            var tokens = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (tokens.Length == 0 ||
+                !tokens.All(token => options.Any(option => string.Equals(option, token, StringComparison.OrdinalIgnoreCase))))
+            {
+                return null;
+            }
+
+            return tokens.Any(token => string.Equals(token, actual, StringComparison.OrdinalIgnoreCase));
+        }
+
         private static bool NumericCompare(string value, double actual)
         {
             if (!TryParseComparison(value, out var op, out var number))
@@ -300,10 +318,18 @@ namespace NzbDrone.Core.AudioFormats
             switch (Field)
             {
                 case AudioStreamField.Codec:
-                    return RegexMatches(Value, MediaInfoFormatter.FormatAudioCodec(stream, input.SceneName));
+                {
+                    var codec = MediaInfoFormatter.FormatAudioCodec(stream, input.SceneName);
+
+                    return MatchesOptionList(Value, AudioStreamValueOptions.CodecOptions, codec) ?? RegexMatches(Value, codec);
+                }
 
                 case AudioStreamField.Channels:
-                    return RegexMatches(Value, MediaInfoFormatter.FormatAudioChannels(stream).ToString("0.0", CultureInfo.InvariantCulture));
+                {
+                    var channels = MediaInfoFormatter.FormatAudioChannels(stream).ToString("0.0", CultureInfo.InvariantCulture);
+
+                    return MatchesOptionList(Value, AudioStreamValueOptions.ChannelOptions, channels) ?? RegexMatches(Value, channels);
+                }
 
                 case AudioStreamField.Bitrate:
                     return NumericCompare(Value, stream.Bitrate / 1000.0);

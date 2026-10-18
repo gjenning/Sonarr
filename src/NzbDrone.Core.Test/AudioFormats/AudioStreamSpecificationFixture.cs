@@ -33,12 +33,14 @@ namespace NzbDrone.Core.Test.AudioFormats
             long bitrate = 640000,
             string title = "",
             string language = "eng",
-            bool visualImpaired = false)
+            bool visualImpaired = false,
+            string codecId = "",
+            string profile = "")
         {
             return Builder<MediaInfoAudioStreamModel>.CreateNew()
                 .With(s => s.Format, codec)
-                .With(s => s.CodecId, "")
-                .With(s => s.Profile, "")
+                .With(s => s.CodecId, codecId)
+                .With(s => s.Profile, profile)
                 .With(s => s.Channels, channels)
                 .With(s => s.ChannelPositions, channelPositions)
                 .With(s => s.Bitrate, bitrate)
@@ -130,6 +132,35 @@ namespace NzbDrone.Core.Test.AudioFormats
         {
             GivenSpecification(AudioStreamField.Codec, value, negate: true);
             GivenStreams(AudioStream(codec: "truehd"));
+
+            Subject.IsSatisfiedBy(_input).Should().Be(expected);
+        }
+
+        // A value whose tokens are all known options is matched exactly (case-insensitive),
+        // so TrueHD no longer matches a TrueHD Atmos stream; anything else keeps regex
+        // semantics for hand-written and legacy conditions.
+        [TestCase("TrueHD", false)]
+        [TestCase("TrueHD Atmos", true)]
+        [TestCase("TrueHD,TrueHD Atmos", true)]
+        [TestCase("truehd", false)]
+        [TestCase("truehd.*", true)]
+        [TestCase("truehd|dts", true)]
+        public void codec_option_list_should_match_atmos_stream(string value, bool expected)
+        {
+            GivenSpecification(AudioStreamField.Codec, value);
+            GivenStreams(AudioStream(codec: "truehd", codecId: "thd+"));
+
+            Subject.IsSatisfiedBy(_input).Should().Be(expected);
+        }
+
+        [TestCase("5.1,7.1", true)]
+        [TestCase("5.1", true)]
+        [TestCase("7.1", false)]
+        [TestCase("5.1|7.1", true)]
+        public void channels_option_list_should_match_stream(string value, bool expected)
+        {
+            GivenSpecification(AudioStreamField.Channels, value);
+            GivenStreams(AudioStream(channels: 6, channelPositions: "5.1(side)"));
 
             Subject.IsSatisfiedBy(_input).Should().Be(expected);
         }
@@ -353,7 +384,13 @@ namespace NzbDrone.Core.Test.AudioFormats
             GivenSpecification(AudioStreamField.Codec, "truehd");
             ThenValueShouldBeValid();
 
+            GivenSpecification(AudioStreamField.Codec, "TrueHD,TrueHD Atmos");
+            ThenValueShouldBeValid();
+
             GivenSpecification(AudioStreamField.Channels, "5.1|7.1");
+            ThenValueShouldBeValid();
+
+            GivenSpecification(AudioStreamField.Channels, "5.1,7.1");
             ThenValueShouldBeValid();
 
             GivenSpecification(AudioStreamField.Bitrate, ">=640");
