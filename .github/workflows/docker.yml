@@ -3,7 +3,7 @@ name: Docker
 on:
   workflow_dispatch:
   push:
-    branches: [develop, main]
+    branches: [develop, main, audio-profiles]
     tags: ["v*.*.*", "v*.*"]
   pull_request:
     branches: [develop, main]
